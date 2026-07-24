@@ -1,0 +1,4 @@
+[
+    { "xlsx": "旧货翻身局_配置数据", "sheet": "ITEM_DEFS", "json": "items", "jsonFormat": true },
+    { "xlsx": "旧货翻身局_配置数据", "sheet": "EXPERT_DEFS", "json": "experts", "jsonFormat": true }
+]

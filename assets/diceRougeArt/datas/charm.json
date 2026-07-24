@@ -1,0 +1,20 @@
+{
+  "charms": [
+    {
+      "id": "c001",
+      "name": "火焰骰子",
+      "type": "base",
+      "desc": "获得火焰骰子，参与攻击时，额外+3伤害",
+      "effect": "fire",
+      "icon": "c001_six_spark"
+    },
+    {
+      "id": "c002",
+      "name": "倍率骰子",
+      "type": "base",
+      "desc": "获得倍率骰子，参与攻击时，倍率+1",
+      "effect": "mult",
+      "icon": "c027_mult_altar"
+    }
+  ]
+}

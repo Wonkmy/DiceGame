@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "8af051d3-f0b9-4574-b3be-809c28545c8e",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 128,
+  "height": 128,
+  "platformSettings": {},
+  "subMetas": {
+    "c019_blood_cup": {
+      "ver": "1.0.6",
+      "uuid": "9f72cfdd-768c-4a2a-8462-8da6eb55f7ed",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "8af051d3-f0b9-4574-b3be-809c28545c8e",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0.5,
+      "offsetY": -0.5,
+      "trimX": 16,
+      "trimY": 10,
+      "width": 97,
+      "height": 109,
+      "rawWidth": 128,
+      "rawHeight": 128,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

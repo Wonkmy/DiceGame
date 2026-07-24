@@ -1,0 +1,40 @@
+{
+  "ver": "2.3.7",
+  "uuid": "57ca6239-ba27-40df-ad6d-5c0716d8aee5",
+  "importer": {
+    "textureType": 2
+  },
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 256,
+  "height": 256,
+  "platformSettings": {},
+  "subMetas": {
+    "m006_red_thief": {
+      "ver": "1.0.6",
+      "uuid": "e70060b6-c462-4a7f-9ae7-c0990f48dcb1",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "57ca6239-ba27-40df-ad6d-5c0716d8aee5",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0.5,
+      "offsetY": -9.5,
+      "trimX": 48,
+      "trimY": 42,
+      "width": 161,
+      "height": 191,
+      "rawWidth": 256,
+      "rawHeight": 256,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}
