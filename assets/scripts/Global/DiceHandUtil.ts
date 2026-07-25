@@ -1,9 +1,12 @@
 export class CharmData{
     id:number = 0;
     name:string = "";
+    type:string = "";
     desc:string = "";
     effect:string = "";
+    num:number = 0;
     icon:string = "";
+    useCount:number = 0;
 }
 export enum DiceType{
     /**
@@ -112,9 +115,9 @@ export function GetCalculateMultiple(_type: DiceHandType): CalculateData {
         case DiceHandType.Three:
             return new CalculateData(14, 1);
         case DiceHandType.Four:
-            return new CalculateData(22, 1);
+            return new CalculateData(22, 2);
         case DiceHandType.Straight:
-            return new CalculateData(18, 1);
+            return new CalculateData(18, 2);
         default:
             return new CalculateData(5,1);
     }

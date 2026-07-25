@@ -6,15 +6,29 @@
       "type": "base",
       "desc": "获得火焰骰子，参与攻击时，额外+3伤害",
       "effect": "fire",
-      "icon": "c001_six_spark"
+      "num":3,
+      "icon": "c001_six_spark",
+      "useCount":-1
     },
     {
       "id": "c002",
+      "name": "膨胀",
+      "type": "base",
+      "desc": "下次攻击时，额外+20点数，持续一局",
+      "effect": "point",
+      "num":20,
+      "icon": "c001_six_spark",
+      "useCount":1
+    },
+    {
+      "id": "c027",
       "name": "倍率骰子",
       "type": "base",
       "desc": "获得倍率骰子，参与攻击时，倍率+1",
       "effect": "mult",
-      "icon": "c027_mult_altar"
+      "num":1,
+      "icon": "c027_mult_altar",
+      "useCount":-1
     }
   ]
 }

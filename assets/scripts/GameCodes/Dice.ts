@@ -63,12 +63,14 @@ export default class Dice extends cc.Component {
                 sprite.spriteFrame = sf;
             })
             MainPanel.instance.selectedDicePoint.push(this.finalIndex)
+            MainPanel.instance.selectedDice.push(this.node)
         } else {
             GameMain.instance.bundle.load("arts/dices/" + DiceType[this.diceType] + "/" + (this.finalIndex), cc.SpriteFrame, (err, sf: cc.SpriteFrame) => {
                 let sprite: cc.Sprite = this.node.getChildByName("view").getComponent(cc.Sprite);
                 sprite.spriteFrame = sf;
             })
             MainPanel.instance.selectedDicePoint.splice(MainPanel.instance.selectedDicePoint.indexOf(this.finalIndex), 1);
+            MainPanel.instance.selectedDice.splice(MainPanel.instance.selectedDice.indexOf(this.node),1);
         }
 
         MainPanel.instance.curDiceHandResult = getDiceHandResult(MainPanel.instance.selectedDicePoint);
@@ -123,7 +125,6 @@ export default class Dice extends cc.Component {
         newDiceNode.dicePoint = this.finalIndex;
         newDiceNode.diceNode = this.node;
         newDiceNode.diceType = this.diceType;
-        MainPanel.instance.dice_num_node.push(newDiceNode)
         this.startDice = true;
     }
     private changeDiceSp(){

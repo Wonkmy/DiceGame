@@ -1,4 +1,5 @@
-import { DiceType } from "../Global/DiceHandUtil";
+import GameMain from "../GameMain";
+import { CharmData, DiceType } from "../Global/DiceHandUtil";
 import MainPanel from "../Panels/MainPanel";
 
 const {ccclass, property} = cc._decorator;
@@ -50,7 +51,6 @@ export default class Player extends cc.Component {
             this.myDices.push(dType);
         }
 
-
         for (let i = 0; i < this.curSelectedDiceType.length; i++) {
             if(this.curSelectedDiceType[i] === dType){
                 repeatSeleDices = true;
@@ -59,7 +59,6 @@ export default class Player extends cc.Component {
         if(repeatSeleDices == false){
             this.curSelectedDiceType.push(dType);
         }
-
     }
 
     brHurt(v:number){

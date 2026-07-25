@@ -3,7 +3,7 @@ import MainPanelRuntime from "./Panels/MainPanelRuntime";
 import { FaynUtils } from "./Global/FaynUtils";
 import TipPanel from "./Panels/TipPanel";
 import { UIManager } from "./UIManager/UIManager";
-import { DiceType } from "./Global/DiceHandUtil";
+import { CharmData, DiceType } from "./Global/DiceHandUtil";
 import Player from "./GameCodes/Player";
 
 const {ccclass, property} = cc._decorator;
@@ -24,6 +24,13 @@ export default class GameMain extends cc.Component {
     private marketBgmStarted:boolean = false;
 
     static curStage:number = 0;
+    static gameFinished:boolean = false;
+
+
+    // 如果有道具或者三选一的功能是改变点数和倍率的，直接使用这两个
+    static extraPoint:number = 0;
+    static extraMultiple:number = 0;
+    static charmDatas:CharmData[]=[]
 
     protected onLoad(): void {
         cc.director.getCollisionManager().enabled=true;

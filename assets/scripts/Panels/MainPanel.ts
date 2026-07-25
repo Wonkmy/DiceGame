@@ -9,6 +9,8 @@ import Player from "../GameCodes/Player";
 import { UIManager } from "../UIManager/UIManager";
 import ResultPanel from "./ResultPanel";
 import BagPanel from "./BagPanel";
+import TipPanel from "./TipPanel";
+import RewardItem from "../UIManager/RewardItem";
 
 const {ccclass, property} = cc._decorator;
 
@@ -17,8 +19,10 @@ export default class MainPanel extends BaseUI {
     public static instance:MainPanel = null!;
     protected static className = "MainPanel";
 
-    dice_num_node:DiceNodePoint[] = [];
+    allDicesNodes:cc.Node[] = [];
     selectedDicePoint:number[]=[]
+    selectedDice:cc.Node[]=[]
+
     calculateData:CalculateData = null!;
     curDiceHandResult:DiceHandResult = null!;
     unusePointCount:number = 0;
@@ -26,6 +30,8 @@ export default class MainPanel extends BaseUI {
     allMonsterDatas:MonsterData[]=[]
     allCharmDatas:CharmData[]=[]
     monster:Monster = null!;
+
+    allCharmItems:cc.Node[] = [];// 所有的加成item显示列表
 
     battlleIn:boolean = false;
 
@@ -73,8 +79,12 @@ export default class MainPanel extends BaseUI {
     override onShow(): void {
         this.refreshAllUIText(0,0,0,null,true);
         GameMain.instance.player.init();
+        GameMain.gameFinished = false;// 重置游戏结束标志位
         this.loadData();
         this.loadGame();
+
+        this.showCharmData();
+
         this.btn_onRoll.on(cc.Node.EventType.TOUCH_END,this.onReRoll,this)
         this.btn_start.on(cc.Node.EventType.TOUCH_END,this.onStartBattle,this)
         this.btn_openDicePackage.on(cc.Node.EventType.TOUCH_END,this.onOpenBagPanel,this)
@@ -86,7 +96,38 @@ export default class MainPanel extends BaseUI {
             .start();
     }
 
+    private showCharmData(){
+        for (let i = 0; i < GameMain.charmDatas.length; i++) {
+            const c = GameMain.charmDatas[i];
+            GameMain.instance.bundle.load("prefab/RewardItem", cc.Prefab, (err, prefab: cc.Prefab) => {
+                let newRewardItem: cc.Node = cc.instantiate(prefab);
+                this.allCharmItems.push(newRewardItem);
+                this.node.getChildByName("buffContainer").addChild(newRewardItem);
+                newRewardItem.scale = 0.75;
+                newRewardItem.getComponent(RewardItem).setOnlyClick(c);
+                newRewardItem.y = 0;
+                if(c.useCount > 0){
+                    if(c.effect === "point"){
+                        GameMain.extraPoint += c.num;
+                    }
+                }
+            })
+        }
+    }
+
+    private refreshAllCharmItems(){
+        for (let i = 0; i < this.allCharmItems.length; i++){
+            this.allCharmItems[i].getComponent(RewardItem).charmData.useCount--;
+            if (this.allCharmItems[i].getComponent(RewardItem).charmData.useCount == 0) {
+                GameMain.charmDatas.splice(i, 1);
+                this.allCharmItems[i].destroy();
+                this.allCharmItems.splice(i,1);
+            }
+        }
+    }
+
     private onOpenBagPanel(){
+        if(GameMain.gameFinished)return;
         UIManager.getInstance().openUI(BagPanel, 0, (ui: BagPanel) => {
             ui.onShow();
             ui.setInventoryData("bag");
@@ -96,6 +137,13 @@ export default class MainPanel extends BaseUI {
      * 重新刷新当前店铺物品，需要花费高额预算（后期看广告的盈利点）
      */
     private onReRoll(){
+        if(GameMain.gameFinished){
+            UIManager.getInstance().openUI(TipPanel, 0, (ui: TipPanel) => {
+                ui.onShow();
+                ui.showTip("当前战斗已结束",null)
+            })
+            return;
+        }
         if(this.onRollling)return;
         this.onRollling = true;
         FaynUtils.PlayMusic("btnclick",false,1);
@@ -103,72 +151,53 @@ export default class MainPanel extends BaseUI {
     }
 
     private onStartBattle() {
+        if(this.selectedDice.length<=0){
+            UIManager.getInstance().openUI(TipPanel, 0, (ui: TipPanel) => {
+                ui.onShow();
+                ui.showTip("请选择至少一个骰子",null)
+            })
+            return;
+        }
         if (this.battlleIn) return;
         this.battlleIn = true;
-        // let data = GetCalculateMultiple(this.curDiceHandResult.type);
-        // let allPoint: number[] = this.curDiceHandResult.usedDicePoint;
-        // let unusePoint: number[] = this.curDiceHandResult.unusedDicePoint;
-        // let totalPoint = data.totalPoints;
-        // let totalMul = data.totalMultiple;
-        // this.calculateData.totalPoints = totalPoint;
-        // this.calculateData.totalMultiple = totalMul;
-        // let totalAttack = 0;
-        // let processedDice = new Set<DiceNodePoint>();
-        // for (let i = 0; i < allPoint.length; i++) {
-        //     const element = allPoint[i];
-        //     this.dice_num_node.forEach((d: DiceNodePoint) => {
-        //         if (d.dicePoint === element && !processedDice.has(d)) {
-        //             processedDice.add(d);
-        //             this.calculateData.totalPoints += element;
-        //             this.loadTip(new cc.Vec2(d.diceNode.x, d.diceNode.y), element,cc.Color.WHITE);
-        //             if (d.diceType === DiceType.fire) {
-        //                 totalAttack += 3;
-        //                 this.loadTip(new cc.Vec2(d.diceNode.x, d.diceNode.y), 3,cc.Color.RED);
-        //             }
-        //             if(d.diceType === DiceType.mult){
-        //                 this.calculateData.totalMultiple += 1
-        //             }
-        //         }
-        //     });
-        // }
         let data = GetCalculateMultiple(this.curDiceHandResult.type);
         let allPoint: number[] = this.curDiceHandResult.usedDicePoint;
+        let unusePoint: number[] = this.curDiceHandResult.unusedDicePoint;
         let totalPoint = data.totalPoints;
         let totalMul = data.totalMultiple;
-        this.calculateData.totalPoints = totalPoint;
-        this.calculateData.totalMultiple = totalMul;
+
+        this.calculateData.totalPoints = totalPoint + GameMain.extraPoint;
+        this.calculateData.totalMultiple = totalMul + GameMain.extraMultiple;
+
+        GameMain.extraPoint = 0;
+        GameMain.extraMultiple = 0;
         let totalAttack = 0;
-
-        // 创建选中点数的计数映射
-        let selectedPointCount = new Map<number, number>();
-        for (let point of this.selectedDicePoint) {
-            selectedPointCount.set(point, (selectedPointCount.get(point) || 0) + 1);
+        let processedDice = new Set<cc.Node>();
+        for (let i = 0; i < allPoint.length; i++) {
+            const element = allPoint[i];
+            this.selectedDice.forEach((d: cc.Node) => {
+                if (d.getComponent(Dice).finalIndex === element && !processedDice.has(d)) {
+                    processedDice.add(d);
+                    this.calculateData.totalPoints += element;
+                    this.loadTip(new cc.Vec2(d.x, d.y), element,cc.Color.WHITE,this.node);
+                    if (d.getComponent(Dice).diceType === DiceType.fire) {
+                        totalAttack += 3;
+                        this.loadTip(new cc.Vec2(d.x, d.y), 3,cc.Color.RED,this.node);
+                    }
+                    if(d.getComponent(Dice).diceType === DiceType.mult){
+                        this.calculateData.totalMultiple += 1
+                    }
+                }
+            });
         }
 
-        // 遍历所有骰子，匹配选中的点数
-        for (let i = 0; i < this.dice_num_node.length; i++) {
-            const d = this.dice_num_node[i];
-            const point = d.dicePoint;
-
-            // 检查这个点数的骰子是否还需要
-            let remainingCount = selectedPointCount.get(point) || 0;
-            if (remainingCount > 0) {
-                // 标记已使用
-                selectedPointCount.set(point, remainingCount - 1);
-
-                // 执行计算
-                this.calculateData.totalPoints += point;
-                this.loadTip(new cc.Vec2(d.diceNode.x, d.diceNode.y), point, cc.Color.WHITE);
-
-                if (d.diceType === DiceType.fire) {
-                    totalAttack += 3;
-                    this.loadTip(new cc.Vec2(d.diceNode.x, d.diceNode.y), 3, cc.Color.RED);
-                }
-                if (d.diceType === DiceType.mult) {
-                    this.calculateData.totalMultiple += 1;
-                }
+        this.allCharmItems.forEach((charm)=>{
+            let cData:CharmData = charm.getComponent(RewardItem).charmData;
+            if(cData.useCount>0){
+                this.loadTip(new cc.Vec2(0, (charm.height + 10) * charm.scale), cData.num,cc.Color.RED,charm);
             }
-        }
+        })
+
         console.log("最终攻击力为:" + totalAttack);
 
         this.scheduleOnce(()=>{
@@ -227,53 +256,26 @@ export default class MainPanel extends BaseUI {
         console.log("最终真实准备造成的伤害" + finalAttack);
         this.monster.beHurt(finalAttack);
 
-        this.cameraShake(1.1);
+        this.cameraShake(1.0 + (finalAttack * 0.03 / 10));
 
-        // 使用 selectedDicePoint 作为主要匹配依据
-        let selectedPointCount = new Map<number, number>();
-        for (let point of this.selectedDicePoint) {
-            selectedPointCount.set(point, (selectedPointCount.get(point) || 0) + 1);
-        }
-
-        // 验证数据一致性（可选）
-        if (allPoint.length !== this.selectedDicePoint.length) {
-            console.warn(`数据不一致: allPoint长度=${allPoint.length}, selectedDicePoint长度=${this.selectedDicePoint.length}`);
-            // 如果不一致，使用 allPoint 重新构建计数
-            selectedPointCount = new Map<number, number>();
-            for (let point of allPoint) {
-                selectedPointCount.set(point, (selectedPointCount.get(point) || 0) + 1);
+        for (let i = 0; i < this.selectedDice.length; i++) {
+            const d = this.selectedDice[i];// 已选择的所有骰子
+            const point = d.getComponent(Dice).finalIndex;// 已选择的那个骰子的点数
+            if(allPoint.includes(point)){// 已选择的那个骰子的点数是否在已参与战斗的骰子点数列表中
+                d.destroy();
+                this.allDicesNodes.splice(this.allDicesNodes.indexOf(d),1)// 移除这个骰子
+            }else {
+                d.getComponent(Dice).setDeSelected();
             }
-        }
-
-        let indicesToRemove: number[] = [];
-
-        for (let i = 0; i < this.dice_num_node.length; i++) {
-            const d = this.dice_num_node[i];
-            const point = d.dicePoint;
-
-            let remainingCount = selectedPointCount.get(point) || 0;
-            if (remainingCount > 0) {
-                indicesToRemove.push(i);
-                selectedPointCount.set(point, remainingCount - 1);
-            } else {
-                d.diceNode.getComponent(Dice).setDeSelected();
-            }
-        }
-
-        indicesToRemove.sort((a, b) => b - a);
-        for (let index of indicesToRemove) {
-            const d = this.dice_num_node[index];
-            if (d && d.diceNode) {
-                d.diceNode.destroy();
-            }
-            this.dice_num_node.splice(index, 1);
         }
 
         // 重置选中的骰子点数
         this.selectedDicePoint = [];
+        this.selectedDice=[];
         this.calculateData = null!;
         this.refreshAllUIText(0, 0, 0, null, true);
-        this.unusePointCount = 5 - this.dice_num_node.length;
+        this.refreshAllCharmItems();// 移除底部所有已使用的charm
+        this.unusePointCount = 5 - this.allDicesNodes.length;
         this.battlleIn = false;
         this.onRollling = false;
     }
@@ -308,9 +310,12 @@ export default class MainPanel extends BaseUI {
                 let newCharmData: CharmData = new CharmData();
                 newCharmData.id = percharmData.id;
                 newCharmData.name = percharmData.name;
+                newCharmData.type = percharmData.type;
                 newCharmData.desc = percharmData.desc;
                 newCharmData.effect = percharmData.effect;
+                newCharmData.num = percharmData.num;
                 newCharmData.icon = percharmData.icon;
+                newCharmData.useCount = percharmData.useCount;
                 this.allCharmDatas.push(newCharmData);
             }
         })
@@ -323,35 +328,36 @@ export default class MainPanel extends BaseUI {
                 return;
             }
             let oldPoionts: cc.Vec2[] = []
-            this.dice_num_node.forEach(d => {
-                oldPoionts.push(new cc.Vec2(d.diceNode.x, d.diceNode.y))
+            this.allDicesNodes.forEach(d => {
+                oldPoionts.push(new cc.Vec2(d.x, d.y))
             })
-                let points: cc.Vec2[] = getNoOverlapDicePositions(
-                    this.unusePointCount,
-                    {
-                        minX: -192,
-                        maxX: 192,
-                        minY: -33,
-                        maxY: 220,
-                    },
-                    80,
-                    300,
-                    oldPoionts
-                );
-                for (let i = 0; i < Math.min(this.unusePointCount, points.length); i++) {
-                    let random:number  = randomInt(0,dTypes.length)
-                    let newDice: cc.Node = cc.instantiate(prefab)
-                    if (!newDice) {
-                        continue;
-                    }
-                    this.node.addChild(newDice);
-                    const diceComp = newDice.getComponent(Dice);
-                    if (diceComp) {
-                        diceComp.init(new cc.Vec2(this.btn_onRoll.position.x,this.btn_onRoll.position.y), points[i],i,dTypes[random]);
-                    } else {
-                        console.error(`第${i + 1}个骰子组件获取失败`);
-                    }
+            let points: cc.Vec2[] = getNoOverlapDicePositions(
+                this.unusePointCount,
+                {
+                    minX: -192,
+                    maxX: 192,
+                    minY: -33,
+                    maxY: 220,
+                },
+                80,
+                300,
+                oldPoionts
+            );
+            for (let i = 0; i < Math.min(this.unusePointCount, points.length); i++) {
+                let random: number = randomInt(0, dTypes.length)
+                let newDice: cc.Node = cc.instantiate(prefab)
+                if (!newDice) {
+                    continue;
                 }
+                this.node.addChild(newDice);
+                this.allDicesNodes.push(newDice);
+                const diceComp = newDice.getComponent(Dice);
+                if (diceComp) {
+                    diceComp.init(new cc.Vec2(this.btn_onRoll.position.x, this.btn_onRoll.position.y), points[i], i, dTypes[random]);
+                } else {
+                    console.error(`第${i + 1}个骰子组件获取失败`);
+                }
+            }
         })
     }
 
@@ -366,6 +372,7 @@ export default class MainPanel extends BaseUI {
     }
 
     disposeMonster(monster:Monster){
+        GameMain.gameFinished = true;
         this.monster = null!;
         monster.node.destroy();
 
@@ -374,10 +381,10 @@ export default class MainPanel extends BaseUI {
         })
     }
 
-    loadTip(pos:cc.Vec2,num:number,_color:cc.Color){
+    loadTip(pos:cc.Vec2,num:number,_color:cc.Color,parent:cc.Node){
         GameMain.instance.bundle.load("prefab/tip", cc.Prefab,(err,prefab:cc.Prefab)=>{
             let newTip: cc.Node = cc.instantiate(prefab);
-            this.node.addChild(newTip);
+            parent.addChild(newTip);
             newTip.getComponent(Tip).init(pos,num,_color);
         })
     }
