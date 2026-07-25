@@ -70,8 +70,8 @@ export default class Player extends cc.Component {
         this.attackNum.string = "-"+String(v)
         cc.tween(this.attackNum.node)
         .parallel(
-            cc.tween().by(0.3,{y:-50}),
-            cc.tween().to(0.3,{opacity:0})
+            cc.tween().by(0.5,{y:-50}),
+            cc.tween().to(0.5,{opacity:0})
         )
         .call(()=>{
             this.attackNum.node.active = false;
@@ -80,11 +80,12 @@ export default class Player extends cc.Component {
 
         cc.tween(this.attackbg)
         .parallel(
-            cc.tween().by(0.3,{y:-50}),
-            cc.tween().to(0.3,{opacity:0})
+            cc.tween().by(0.5,{y:-50}),
+            cc.tween().to(0.5,{opacity:0})
         )
         .call(()=>{
             this.attackbg.active = false;
+            MainPanel.instance.onReRoll();
         })
         .start()
 

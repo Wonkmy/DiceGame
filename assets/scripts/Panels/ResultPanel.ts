@@ -26,17 +26,76 @@ export default class ResultPanel extends BaseUI{
     }
 
     private genThreeChooseRewardItem(){
+        // for (let i = 0; i < 3; i++) {
+        //     setTimeout(() => {
+        //         GameMain.instance.bundle.load("prefab/RewardItem", cc.Prefab,(err,prefab:cc.Prefab)=>{
+        //             let newRewardItem: cc.Node = cc.instantiate(prefab);
+        //             this.threeChooseOneContainerNode.addChild(newRewardItem);
+        //             let r = randomInt(0,MainPanel.instance.allCharmDatas.length);
+        //             let cd:CharmData = MainPanel.instance.allCharmDatas[r]
+        //             newRewardItem.getComponent(RewardItem).init(cd);
+        //         })
+        //     }, 100 * i);
+        // }
+        let usedIds: number[] = [];
+
         for (let i = 0; i < 3; i++) {
             setTimeout(() => {
-                GameMain.instance.bundle.load("prefab/RewardItem", cc.Prefab,(err,prefab:cc.Prefab)=>{
+                GameMain.instance.bundle.load("prefab/RewardItem", cc.Prefab, (err, prefab: cc.Prefab) => {
                     let newRewardItem: cc.Node = cc.instantiate(prefab);
                     this.threeChooseOneContainerNode.addChild(newRewardItem);
-                    let r = randomInt(0,MainPanel.instance.allCharmDatas.length);
-                    let cd:CharmData = MainPanel.instance.allCharmDatas[r]
+
+                    let cd: CharmData = this.getRandomRewardData(usedIds);
+
+                    if (cd && cd.id) {
+                        usedIds.push(cd.id);
+                    }
+
                     newRewardItem.getComponent(RewardItem).init(cd);
-                })
+                });
             }, 100 * i);
         }
+    }
+
+    private getRandomRewardData(usedIds: number[]): CharmData {
+        let effect = this.getRandomRewardEffect();
+
+        let list = MainPanel.instance.allCharmDatas.filter((data: CharmData) => {
+            return data.effect === effect && usedIds.indexOf(data.id) < 0;
+        });
+
+        // 如果当前类型没有可用奖励，就退回到全部未使用奖励
+        if (list.length <= 0) {
+            list = MainPanel.instance.allCharmDatas.filter((data: CharmData) => {
+                return usedIds.indexOf(data.id) < 0;
+            });
+        }
+
+        // 极端情况下还没有，就允许重复
+        if (list.length <= 0) {
+            list = MainPanel.instance.allCharmDatas;
+        }
+
+        let r = randomInt(0, list.length - 1);
+        return list[r];
+    }
+
+    private getRandomRewardEffect(): string {
+        let r = randomInt(1, 100);
+
+        if (r <= 60) {
+            return "mult";
+        }
+
+        if (r <= 85) {
+            return "point";
+        }
+
+        if (r <= 95) {
+            return "fire";
+        }
+
+        return "fire";
     }
 
     private onNextTurn(){

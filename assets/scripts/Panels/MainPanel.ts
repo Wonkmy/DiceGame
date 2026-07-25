@@ -1,7 +1,7 @@
 import GameMain from "../GameMain";
 import { FaynUtils } from "../Global/FaynUtils";
 import { BaseUI } from "../UIManager/BaseUI";
-import { CalculateData, CharmData, DiceHandResult, DiceNodePoint, DiceType, GetCalculateMultiple, getNoOverlapDicePositions, MonsterData, randomInt } from "../Global/DiceHandUtil";
+import { CalculateData, chapterNodeConfig, CharmData, DiceHandResult, DiceNodePoint, DiceType, GetCalculateMultiple, getNoOverlapDicePositions, MonsterData, randomInt } from "../Global/DiceHandUtil";
 import Dice from "../GameCodes/Dice";
 import Tip from "../GameCodes/Tip";
 import Monster from "../GameCodes/Monster";
@@ -85,7 +85,8 @@ export default class MainPanel extends BaseUI {
 
         this.showCharmData();
 
-        this.btn_onRoll.on(cc.Node.EventType.TOUCH_END,this.onReRoll,this)
+        console.log(chapterNodeConfig[0]);
+
         this.btn_start.on(cc.Node.EventType.TOUCH_END,this.onStartBattle,this)
         this.btn_openDicePackage.on(cc.Node.EventType.TOUCH_END,this.onOpenBagPanel,this)
 
@@ -94,6 +95,8 @@ export default class MainPanel extends BaseUI {
                 cc.tween().by(0.3,{scale:0.1}).by(0.3,{scale:-0.1})
             )
             .start();
+
+        this.onReRoll();
     }
 
     private showCharmData(){
@@ -136,7 +139,7 @@ export default class MainPanel extends BaseUI {
     /**
      * 重新刷新当前店铺物品，需要花费高额预算（后期看广告的盈利点）
      */
-    private onReRoll(){
+    onReRoll(){
         if(GameMain.gameFinished){
             UIManager.getInstance().openUI(TipPanel, 0, (ui: TipPanel) => {
                 ui.onShow();
@@ -146,8 +149,11 @@ export default class MainPanel extends BaseUI {
         }
         if(this.onRollling)return;
         this.onRollling = true;
-        FaynUtils.PlayMusic("btnclick",false,1);
-        this.loadDices(GameMain.instance.player.curSelectedDiceType);
+
+        this.scheduleOnce(()=>{
+            FaynUtils.PlayMusic("btnclick",false,1);
+            this.loadDices(GameMain.instance.player.curSelectedDiceType);
+        },1);
     }
 
     private onStartBattle() {
@@ -212,7 +218,7 @@ export default class MainPanel extends BaseUI {
                         cc.tween().to(0.25, { y: 274 }),
                         cc.tween().to(0.25, { scale: 1.5})
                     )
-                    .to(0.15, { scale: 1.2})
+                    .to(0.15, { scale: 1.428})
                     .delay(0.4)
                     .to(0.15, { angle: -30 })
                     .to(0.15, { angle: 80 })
@@ -225,7 +231,7 @@ export default class MainPanel extends BaseUI {
                         cc.tween().to(0.15, { y: -208.3 }),
                         cc.tween().to(0.25, { scale: 1.5})
                     )
-                    .to(0.15, { scale: 1.2})
+                    .to(0.15, { scale: 1.428})
                     .call(() => {
                         _sword.setSiblingIndex(oldIndex);
                         if(this.monster.getCurHp() > 0){
@@ -256,7 +262,8 @@ export default class MainPanel extends BaseUI {
         console.log("最终真实准备造成的伤害" + finalAttack);
         this.monster.beHurt(finalAttack);
 
-        this.cameraShake(1.0 + (finalAttack * 0.03 / 10));
+        let finalScale = Math.min((1.0 + (finalAttack * 0.03 / 10)),1.2)
+        this.cameraShake(finalScale);
 
         for (let i = 0; i < this.selectedDice.length; i++) {
             const d = this.selectedDice[i];// 已选择的所有骰子
@@ -282,7 +289,7 @@ export default class MainPanel extends BaseUI {
 
     private loadGame() {
         setTimeout(() => {
-            this.loadMonster()
+            this.loadChapter()
         }, 150);
     }
 
@@ -300,6 +307,9 @@ export default class MainPanel extends BaseUI {
                 newMonsterData.attack = permonsterData.attack;
                 newMonsterData.gold = permonsterData.gold;
                 newMonsterData.asset = permonsterData.asset;
+                if(permonsterData.behaviorData != null && permonsterData.behaviorData != undefined){
+                    newMonsterData.behaviorData = permonsterData.behaviorData;
+                }
                 this.allMonsterDatas.push(newMonsterData);
             }
         })
@@ -344,30 +354,46 @@ export default class MainPanel extends BaseUI {
                 oldPoionts
             );
             for (let i = 0; i < Math.min(this.unusePointCount, points.length); i++) {
-                let random: number = randomInt(0, dTypes.length)
-                let newDice: cc.Node = cc.instantiate(prefab)
-                if (!newDice) {
-                    continue;
-                }
-                this.node.addChild(newDice);
-                this.allDicesNodes.push(newDice);
-                const diceComp = newDice.getComponent(Dice);
-                if (diceComp) {
-                    diceComp.init(new cc.Vec2(this.btn_onRoll.position.x, this.btn_onRoll.position.y), points[i], i, dTypes[random]);
-                } else {
-                    console.error(`第${i + 1}个骰子组件获取失败`);
-                }
+                let btn_openDicePackagePos = this.node.getChildByName("btn_openDicePackage");
+                cc.tween(btn_openDicePackagePos)
+                    .delay(i * 0.2)
+                    .to(0.2, { scale: 1.2 })
+                    .call(() => {
+                        btn_openDicePackagePos.scale = 1;
+                        let random: number = randomInt(0, dTypes.length)
+                        let newDice: cc.Node = cc.instantiate(prefab)
+                        this.node.addChild(newDice);
+                        this.allDicesNodes.push(newDice);
+                        const diceComp = newDice.getComponent(Dice);
+                        if (diceComp) {
+                            diceComp.init(new cc.Vec2(btn_openDicePackagePos.x, btn_openDicePackagePos.y), points[i], i, dTypes[random]);
+                        } else {
+                            console.error(`第${i + 1}个骰子组件获取失败`);
+                        }
+                    })
+                    .start()
             }
         })
     }
 
-    loadMonster(){
+    loadChapter(){
         GameMain.instance.bundle.load("prefab/monster", cc.Prefab,(err,prefab:cc.Prefab)=>{
             let newMonster: cc.Node = cc.instantiate(prefab);
             this.node.addChild(newMonster);
-            let md:MonsterData = this.allMonsterDatas[GameMain.curStage]
-            newMonster.getComponent(Monster).init(md);
-            this.monster = newMonster.getComponent(Monster);
+            let nodeData = chapterNodeConfig[GameMain.curStage][0];
+            if ((nodeData.type === "battle" || nodeData.type === "elite" || nodeData.type === "boss") && "monsterIds" in nodeData) {
+                let md: MonsterData = this.allMonsterDatas[nodeData.monsterIds]
+                newMonster.getComponent(Monster).init(md);
+                this.monster = newMonster.getComponent(Monster);
+            } else if (nodeData.type === "shop") {
+                // this.openShop();
+            } else if (nodeData.type === "event") {
+                // this.openEvent();
+            } else if (nodeData.type === "rest") {
+                // this.openRest();
+            } else if (nodeData.type === "treasure") {
+                // this.openTreasure();
+            }
         })
     }
 
@@ -435,24 +461,26 @@ export default class MainPanel extends BaseUI {
                                 }
                             }, 800);
                         }
-
                     }, 500);
                 }, 500);
             }, 500);
         }
     }
 
-    nodeScale(target:cc.Node){
+    nodeScale(target:cc.Node,callBack:any = null){
         cc.tween(target)
-        .to(0.2,{scale:1.5})
+        .to(0.2,{scale:1.8})
         .call(()=>{
-            target.scale = 1;
+            target.scale = 1.428;
+            if(callBack != null){
+                callBack()
+            }
         })
         .start()
     }
 
     override onDestroy(): void {
-        this.btn_onRoll.off(cc.Node.EventType.TOUCH_END,this.onReRoll,this)
+        // this.btn_onRoll.off(cc.Node.EventType.TOUCH_END,this.onReRoll,this)
         this.btn_start.off(cc.Node.EventType.TOUCH_END,this.onStartBattle,this)
         this.btn_openDicePackage.off(cc.Node.EventType.TOUCH_END,this.onOpenBagPanel,this)
         this.calculateData = null!;

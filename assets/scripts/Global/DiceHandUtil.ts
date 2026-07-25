@@ -1,3 +1,11 @@
+export const chapterNodeConfig = [
+    [{ type: "battle", monsterIds: 1 }],
+    [{ type: "battle", monsterIds: 2 }],
+    [{ type: "shop" }, { type: "event" }],
+    [{ type: "elite", monsterIds: 3 }],
+    [{ type: "rest" }, { type: "treasure" }],
+    [{ type: "boss", monsterIds: 5 }],
+];
 export class CharmData{
     id:number = 0;
     name:string = "";
@@ -51,6 +59,11 @@ export enum DiceHandType {
     Straight = 5,
 };
 
+export class BehaviorData{
+    type:string = "";
+    des:string = "";
+    bValue:number = 0;
+}
 export class CalculateData {
     totalPoints: number;
     totalMultiple: number;
@@ -71,9 +84,10 @@ export class MonsterData {
     name:string = "";
     stage:number = 0;// 出现的关卡数
     hp: number = 0;
+    shiled: number = 0;
     attack: number = 0;
     gold:number = 0;
-    shiled: number = 0;
+    behaviorData?:BehaviorData;
     asset: string = "";
 }
 

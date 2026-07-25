@@ -13,7 +13,7 @@ export default class Monster extends cc.Component {
 
     totalHp:number = 0;
     curHp:number = 0;
-    shild:number = 0;
+    shiled:number = 0;
     attack:number = 0;
 
     monsterData:MonsterData = null!;
@@ -27,7 +27,7 @@ export default class Monster extends cc.Component {
         this.monsterData = _monsterData;
         this.totalHp = _monsterData.hp;
         this.curHp = this.totalHp;
-        this.shild = _monsterData.shiled;
+        this.shiled = _monsterData.shiled;
         this.attack = _monsterData.attack;
 
         GameMain.instance.bundle.load("arts/monsters/" + this.monsterData.asset, cc.SpriteFrame, (err, sf: cc.SpriteFrame) => {
@@ -95,6 +95,15 @@ export default class Monster extends cc.Component {
                 .to(0.1,{y:-17},{easing:"backIn"})
                 .call(()=>{
                     GameMain.instance.player.brHurt(this.getCurAttack());
+
+                    if (this.monsterData.behaviorData) {
+                        if (this.monsterData.behaviorData.type == "attack") {
+                            console.log("进来计算");
+
+                            this.attack += this.monsterData.behaviorData.bValue;
+                        }
+                        this.refreshInfo()
+                    }
                 })
                 .start()
             })
@@ -120,14 +129,18 @@ export default class Monster extends cc.Component {
 
     private refreshInfo(){
         let ltxt:cc.Label = this.node.getChildByName("monster_intent_bg").getChildByName("attack").getComponent(cc.Label);
-        ltxt.string = String(this.monsterData.attack);
+        ltxt.string = String(this.attack);
         let stxt:cc.Label = this.node.getChildByName("monster_intent_bg").getChildByName("shiled").getComponent(cc.Label);
-        stxt.string = String(this.monsterData.shiled);
+        stxt.string = String(this.shiled);
         let ntxt:cc.Label = this.node.getChildByName("mName").getComponent(cc.Label);
         ntxt.string = String(this.monsterData.name);
+        if(this.monsterData.behaviorData && this.monsterData.behaviorData != undefined){
+            let btxt:cc.Label = this.node.getChildByName("monster_intent_bg").getChildByName("behavior").getComponent(cc.Label);
+            btxt.string = this.monsterData.behaviorData.des;
+        }
     }
     getCurAttack(){
-        return this.monsterData == null ? 0 : this.monsterData.attack;
+        return this.attack;
     }
 
     getCurHp(){

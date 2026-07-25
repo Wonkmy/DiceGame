@@ -8,7 +8,11 @@
             "shiled":2,
             "attack": 5,
             "gold": 6,
-            "behavior": "每回合普通攻击。",
+            "behaviorData": {
+                "type":"attack",
+                "des":"每回合攻击+1",
+                "bValue":1
+            },
             "asset": "m001_green_slime"
         },
         {
@@ -17,9 +21,8 @@
             "stage": 1,
             "hp": 55,
             "shiled":2,
-            "attack": 6,
+            "attack": 7,
             "gold": 6,
-            "behavior": "攻击偏高，生命较低。",
             "asset": "m002_bat"
         },
         {
@@ -30,7 +33,6 @@
             "shiled":3,
             "attack": 7,
             "gold": 7,
-            "behavior": "生命略高。",
             "asset": "m003_skeleton"
         },
         {
@@ -41,7 +43,6 @@
             "shiled":3,
             "attack": 8,
             "gold": 7,
-            "behavior": "每3回合攻击+3。",
             "asset": "m004_poison_blob"
         },
         {
@@ -52,117 +53,106 @@
             "shiled":3,
             "attack": 10,
             "gold": 8,
-            "behavior": "每回合获得2点护盾。",
             "asset": "m005_iron_bug"
         },
         {
             "id": "m006",
             "name": "红眼盗贼",
             "stage": 2,
-            "hp": 42,
+            "hp": 85,
             "shiled":4,
-            "attack": 7,
+            "attack": 15,
             "gold": 10,
-            "behavior": "每2回合攻击一次，攻击较高。",
             "asset": "m006_red_thief"
         },
         {
             "id": "m007",
             "name": "石像守卫",
             "stage": 2,
-            "hp": 55,
+            "hp": 100,
             "shiled":4,
-            "attack": 5,
+            "attack": 10,
             "gold": 11,
-            "behavior": "高生命低攻击。",
             "asset": "m007_stone_guard"
         },
         {
             "id": "m008",
             "name": "火焰小鬼",
             "stage": 2,
-            "hp": 40,
+            "hp": 115,
             "shiled":4,
-            "attack": 8,
+            "attack": 11,
             "gold": 11,
-            "behavior": "每次攻击后，下次攻击+1。",
             "asset": "m008_fire_imp"
         },
         {
             "id": "m009",
             "name": "暗影法师",
             "stage": 2,
-            "hp": 38,
+            "hp": 130,
             "shiled":4,
-            "attack": 6,
+            "attack": 12,
             "gold": 12,
-            "behavior": "每3回合使玩家下次倍率-1。",
             "asset": "m009_shadow_mage"
         },
         {
             "id": "m010",
             "name": "贪金币怪",
             "stage": 2,
-            "hp": 46,
+            "hp": 240,
             "shiled":5,
-            "attack": 6,
+            "attack": 14,
             "gold": 14,
-            "behavior": "奖励金币较多。",
             "asset": "m010_gold_gremlin"
         },
         {
             "id": "m011",
             "name": "双刃骑士",
             "stage": 3,
-            "hp": 62,
+            "hp": 145,
             "shiled":5,
-            "attack": 9,
+            "attack": 13,
             "gold": 15,
-            "behavior": "每2回合连续攻击2次。",
             "asset": "m011_double_knight"
         },
         {
             "id": "m012",
             "name": "诅咒巫师",
             "stage": 3,
-            "hp": 58,
+            "hp": 165,
             "shiled":5,
-            "attack": 8,
+            "attack": 14,
             "gold": 16,
-            "behavior": "每3回合禁止一次重掷。",
             "asset": "m012_curse_wizard"
         },
         {
             "id": "m013",
             "name": "巨口吞噬者",
             "stage": 3,
-            "hp": 72,
+            "hp": 185,
             "shiled":5,
-            "attack": 8,
+            "attack": 15,
             "gold": 17,
-            "behavior": "生命越低，攻击越高。",
             "asset": "m013_big_mouth"
         },
         {
             "id": "m014",
             "name": "镜面傀儡",
             "stage": 3,
-            "hp": 66,
+            "hp": 210,
             "shiled":5,
-            "attack": 7,
+            "attack": 16,
             "gold": 18,
-            "behavior": "受到高伤害后，下回合获得护盾。",
             "asset": "m014_mirror_golem"
         },
         {
             "id": "m015",
             "name": "深渊猎手",
             "stage": 3,
-            "hp": 60,
+            "hp": 380,
             "shiled":8,
-            "attack": 10,
+            "attack": 18,
             "gold": 18,
-            "behavior": "每回合攻击，压迫较强。",
             "asset": "m015_abyss_hunter"
         }
     ]
