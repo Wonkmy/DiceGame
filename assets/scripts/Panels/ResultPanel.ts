@@ -82,7 +82,9 @@ export default class ResultPanel extends BaseUI{
 
     private getRandomRewardEffect(): string {
         let r = randomInt(1, 100);
-
+        if (r <= 30) {
+            return "heal";
+        }
         if (r <= 60) {
             return "mult";
         }

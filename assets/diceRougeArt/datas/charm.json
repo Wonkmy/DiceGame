@@ -21,6 +21,16 @@
       "useCount":1
     },
     {
+      "id": "c003",
+      "name": "治疗",
+      "type": "base",
+      "desc": "获得治疗骰子，参与攻击时,回复5生命值",
+      "effect": "heal",
+      "num":5,
+      "icon": "c001_six_spark",
+      "useCount":-1
+    },
+    {
       "id": "c027",
       "name": "倍率骰子",
       "type": "base",

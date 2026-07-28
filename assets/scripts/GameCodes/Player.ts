@@ -61,12 +61,22 @@ export default class Player extends cc.Component {
         }
     }
 
+    addHp(v: number) {
+        this.curHP += v;
+        if (this.curHP >= this.totalHp) {
+            this.curHP = this.totalHp;
+        }
+
+        this.hpText.string = String(this.curHP);
+    }
+
     brHurt(v:number){
         this.curHP -= v;
 
         this.attackNum.node.active = true;
         this.attackbg.active = true;
 
+        this.attackNum.node.color = cc.Color.RED;
         this.attackNum.string = "-"+String(v)
         cc.tween(this.attackNum.node)
         .parallel(

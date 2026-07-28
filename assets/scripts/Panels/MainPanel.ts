@@ -85,18 +85,16 @@ export default class MainPanel extends BaseUI {
 
         this.showCharmData();
 
-        console.log(chapterNodeConfig[0]);
-
         this.btn_start.on(cc.Node.EventType.TOUCH_END,this.onStartBattle,this)
         this.btn_openDicePackage.on(cc.Node.EventType.TOUCH_END,this.onOpenBagPanel,this)
+
+        this.node.getChildByName("GamingContainer").opacity = 0;
 
         cc.tween(this.testip.node)
             .repeatForever(
                 cc.tween().by(0.3,{scale:0.1}).by(0.3,{scale:-0.1})
             )
             .start();
-
-        this.onReRoll();
     }
 
     private showCharmData(){
@@ -105,7 +103,7 @@ export default class MainPanel extends BaseUI {
             GameMain.instance.bundle.load("prefab/RewardItem", cc.Prefab, (err, prefab: cc.Prefab) => {
                 let newRewardItem: cc.Node = cc.instantiate(prefab);
                 this.allCharmItems.push(newRewardItem);
-                this.node.getChildByName("buffContainer").addChild(newRewardItem);
+                this.node.getChildByName("GamingContainer").getChildByName("buffContainer").addChild(newRewardItem);
                 newRewardItem.scale = 0.75;
                 newRewardItem.getComponent(RewardItem).setOnlyClick(c);
                 newRewardItem.y = 0;
@@ -193,6 +191,9 @@ export default class MainPanel extends BaseUI {
                     if(d.getComponent(Dice).diceType === DiceType.mult){
                         this.calculateData.totalMultiple += 1
                     }
+                    if(d.getComponent(Dice).diceType === DiceType.heal){
+                        GameMain.instance.player.addHp(5);
+                    }
                 }
             });
         }
@@ -208,7 +209,7 @@ export default class MainPanel extends BaseUI {
 
         this.scheduleOnce(()=>{
             this.refreshAllUIText(this.calculateData.totalPoints, this.calculateData.totalMultiple,totalAttack, () => {
-                let _sword = this.node.getChildByName("sword")
+                let _sword = this.node.getChildByName("GamingContainer").getChildByName("sword")
                 let oldIndex = _sword.getSiblingIndex();
 
                 _sword.setSiblingIndex(999)
@@ -239,12 +240,23 @@ export default class MainPanel extends BaseUI {
                         }
                         this.NumPointsText.node.parent.active = true;
                         this.NumMultipleText.node.parent.active = true;
-                        this.node.getChildByName("x").active = true;
+                        this.node.getChildByName("GamingContainer").getChildByName("x").active = true;
                     })
                     .start()
             }, false);
         },0.2);
 
+    }
+
+    switchHandType(type:string){
+        let _path = "arts/handwords/" + (type.toLowerCase());
+        cc.tween(this.node.getChildByName("GamingContainer").getChildByName("handwords"))
+            .to(0.2,{scale:1.15})
+            .to(0.2,{scale:0.8})
+            .start()
+        GameMain.instance.bundle.load(_path, cc.SpriteFrame,(err,sp:cc.SpriteFrame)=>{
+            this.node.getChildByName("GamingContainer").getChildByName("handwords").getComponent(cc.Sprite).spriteFrame = sp;
+        })
     }
     private cameraShake(h:number){
         let _cam = cc.find("Canvas/MainCamera").getComponent(cc.Camera);
@@ -285,6 +297,7 @@ export default class MainPanel extends BaseUI {
         this.unusePointCount = 5 - this.allDicesNodes.length;
         this.battlleIn = false;
         this.onRollling = false;
+        this.node.getChildByName("GamingContainer").getChildByName("handwords").getComponent(cc.Sprite).spriteFrame = null!;
     }
 
     private loadGame() {
@@ -354,7 +367,7 @@ export default class MainPanel extends BaseUI {
                 oldPoionts
             );
             for (let i = 0; i < Math.min(this.unusePointCount, points.length); i++) {
-                let btn_openDicePackagePos = this.node.getChildByName("btn_openDicePackage");
+                let btn_openDicePackagePos = this.node.getChildByName("GamingContainer").getChildByName("btn_openDicePackage");
                 cc.tween(btn_openDicePackagePos)
                     .delay(i * 0.2)
                     .to(0.2, { scale: 1.2 })
@@ -362,7 +375,7 @@ export default class MainPanel extends BaseUI {
                         btn_openDicePackagePos.scale = 1;
                         let random: number = randomInt(0, dTypes.length)
                         let newDice: cc.Node = cc.instantiate(prefab)
-                        this.node.addChild(newDice);
+                        this.node.getChildByName("GamingContainer").addChild(newDice);
                         this.allDicesNodes.push(newDice);
                         const diceComp = newDice.getComponent(Dice);
                         if (diceComp) {
@@ -376,25 +389,33 @@ export default class MainPanel extends BaseUI {
         })
     }
 
-    loadChapter(){
-        GameMain.instance.bundle.load("prefab/monster", cc.Prefab,(err,prefab:cc.Prefab)=>{
-            let newMonster: cc.Node = cc.instantiate(prefab);
-            this.node.addChild(newMonster);
-            let nodeData = chapterNodeConfig[GameMain.curStage][0];
-            if ((nodeData.type === "battle" || nodeData.type === "elite" || nodeData.type === "boss") && "monsterIds" in nodeData) {
+    loadChapter() {
+        let nodeData = chapterNodeConfig[GameMain.curStage][0];
+        if ((nodeData.type === "battle" || nodeData.type === "elite" || nodeData.type === "boss") && "monsterIds" in nodeData) {
+            this.openBattle(nodeData);
+        } else if (nodeData.type === "shop") {
+            // this.openShop(nodeData);
+        } else if (nodeData.type === "event") {
+            // this.openEvent(nodeData);
+        } else if (nodeData.type === "rest") {
+            // this.openRest(nodeData);
+        } else if (nodeData.type === "treasure") {
+            // this.openTreasure(nodeData);
+        }
+    }
+
+    private openBattle(nodeData:any){
+        GameMain.instance.bundle.load("prefab/monster", cc.Prefab, (err, prefab: cc.Prefab) => {
+                let newMonster: cc.Node = cc.instantiate(prefab);
+                this.node.getChildByName("GamingContainer").addChild(newMonster);
                 let md: MonsterData = this.allMonsterDatas[nodeData.monsterIds]
                 newMonster.getComponent(Monster).init(md);
                 this.monster = newMonster.getComponent(Monster);
-            } else if (nodeData.type === "shop") {
-                // this.openShop();
-            } else if (nodeData.type === "event") {
-                // this.openEvent();
-            } else if (nodeData.type === "rest") {
-                // this.openRest();
-            } else if (nodeData.type === "treasure") {
-                // this.openTreasure();
-            }
-        })
+            })
+            cc.tween(this.node.getChildByName("GamingContainer"))
+                .to(0.25,{opacity:255})
+                .start()
+            this.onReRoll();
     }
 
     disposeMonster(monster:Monster){
@@ -440,7 +461,7 @@ export default class MainPanel extends BaseUI {
                                 this.nodeScale(this.TotalText.node)
                                 this.NumPointsText.node.parent.active = false;
                                 this.NumMultipleText.node.parent.active = false;
-                                this.node.getChildByName("x").active = false;
+                                this.node.getChildByName("GamingContainer").getChildByName("x").active = false;
                                 setTimeout(() => {
                                     if (callBack != null && callBack != undefined) {
                                         callBack()
@@ -454,7 +475,7 @@ export default class MainPanel extends BaseUI {
                             this.nodeScale(this.TotalText.node)
                             this.NumPointsText.node.parent.active = false;
                             this.NumMultipleText.node.parent.active = false;
-                            this.node.getChildByName("x").active = false;
+                            this.node.getChildByName("GamingContainer").getChildByName("x").active = false;
                             setTimeout(() => {
                                 if (callBack != null && callBack != undefined) {
                                     callBack()

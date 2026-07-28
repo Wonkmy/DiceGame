@@ -1,6 +1,6 @@
 export const chapterNodeConfig = [
+    [{ type: "battle", monsterIds: 0 }],
     [{ type: "battle", monsterIds: 1 }],
-    [{ type: "battle", monsterIds: 2 }],
     [{ type: "shop" }, { type: "event" }],
     [{ type: "elite", monsterIds: 3 }],
     [{ type: "rest" }, { type: "treasure" }],

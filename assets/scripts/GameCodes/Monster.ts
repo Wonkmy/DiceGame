@@ -40,7 +40,7 @@ export default class Monster extends cc.Component {
     }
 
     beHurt(v:number){
-        let finalDamage:number = v - this.monsterData.shiled;
+        let finalDamage:number = v - this.shiled;
         if(finalDamage<=0){
             finalDamage = 1;
         }
@@ -98,9 +98,10 @@ export default class Monster extends cc.Component {
 
                     if (this.monsterData.behaviorData) {
                         if (this.monsterData.behaviorData.type == "attack") {
-                            console.log("进来计算");
-
                             this.attack += this.monsterData.behaviorData.bValue;
+                        }else if(this.monsterData.behaviorData.type == "attack-shiled"){
+                            this.attack += this.monsterData.behaviorData.bValue;
+                            this.shiled += this.monsterData.behaviorData.bValue;
                         }
                         this.refreshInfo()
                     }

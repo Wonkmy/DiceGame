@@ -6,7 +6,7 @@
 //  - https://docs.cocos.com/creator/2.4/manual/en/scripting/life-cycle-callbacks.html
 
 import GameMain from "../GameMain";
-import { DiceNodePoint, DiceType, GetCalculateMultiple, getDiceHandResult, GetTypeNameByType, randomInt } from "../Global/DiceHandUtil";
+import { DiceHandType, DiceNodePoint, DiceType, GetCalculateMultiple, getDiceHandResult, GetTypeNameByType, randomInt } from "../Global/DiceHandUtil";
 import MainPanel from "../Panels/MainPanel";
 
 const {ccclass, property} = cc._decorator;
@@ -75,9 +75,14 @@ export default class Dice extends cc.Component {
 
         MainPanel.instance.curDiceHandResult = getDiceHandResult(MainPanel.instance.selectedDicePoint);
         console.log("当前选择的点数型是:" + GetTypeNameByType(MainPanel.instance.curDiceHandResult.type));
+        let _type = MainPanel.instance.curDiceHandResult.type;
+        MainPanel.instance.switchHandType(DiceHandType[_type]);
         if (MainPanel.instance.curDiceHandResult.type > 0) {
             MainPanel.instance.NumPointsText.string = GetCalculateMultiple(MainPanel.instance.curDiceHandResult.type).totalPoints.toString();
             MainPanel.instance.NumMultipleText.string = GetCalculateMultiple(MainPanel.instance.curDiceHandResult.type).totalMultiple.toString();
+        }else{
+            MainPanel.instance.NumPointsText.string = "0";
+            MainPanel.instance.NumMultipleText.string = "0";
         }
     }
     async setDeSelected() {

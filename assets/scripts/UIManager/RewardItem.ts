@@ -55,6 +55,9 @@ export default class RewardItem extends cc.Component {
             if (effect === "mult") {
                 GameMain.instance.player.addDice(DiceType.mult);
             }
+            if (effect === "heal") {
+                GameMain.instance.player.addDice(DiceType.heal);
+            }
         }
         this.node.parent.destroyAllChildren();
         this.node.parent.active = false;
