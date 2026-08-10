@@ -1,11 +1,79 @@
-export const chapterNodeConfig = [
-    [{ type: "battle", monsterIds: 0 }],
-    [{ type: "battle", monsterIds: 1 }],
-    [{ type: "shop" }, { type: "event" }],
-    [{ type: "elite", monsterIds: 3 }],
-    [{ type: "rest" }, { type: "treasure" }],
-    [{ type: "boss", monsterIds: 5 }],
-];
+export class EventData{
+    monsterIds:number = 0;
+    eType:string = "";
+}
+export class Chapter{
+    type:string="";
+    eventData:EventData = null!;
+}
+export class GameChapter{
+    level:number = 0;
+    chapterName:string = "";
+    chapter:Chapter[][]=[];
+};
+
+function createMonsterChapter(type: string, monsterID: number): Chapter {
+    var chapter: Chapter = new Chapter();
+    var _eventData:EventData = new EventData();
+    chapter.type = type;
+    _eventData.eType = "";
+    _eventData.monsterIds = monsterID;
+    chapter.eventData = _eventData;
+
+    return chapter;
+}
+
+function createEventChapter(type: string, eType: string): Chapter {
+    var chapter: Chapter = new Chapter();
+    var _eventData:EventData = new EventData();
+    chapter.type = type;
+    _eventData.eType = eType;
+    _eventData.monsterIds = -1;
+    chapter.eventData = _eventData;
+    return chapter;
+}
+
+export class CreateChapter {
+    static level1Chapter: GameChapter = null!;
+    static defaultChapter: GameChapter = null!;
+    static init() {
+        this.defaultChapter = new GameChapter();
+        this.defaultChapter.level = 1;
+        this.defaultChapter.chapterName = "默认章节";
+        this.defaultChapter.chapter = [
+            [createMonsterChapter("battle", 0)],
+            [createEventChapter("shop", "weaponshop"), createEventChapter("event", "event")],
+            [createMonsterChapter("battle", 1)],
+            [createMonsterChapter("elite", 3)],
+            [createEventChapter("rest", "rest"), createEventChapter("treasure", "treasure")],
+            [createMonsterChapter("boss", 5)],
+        ];
+
+
+        this.level1Chapter = new GameChapter();
+        this.level1Chapter.level = 1;
+        this.level1Chapter.chapterName = "新手章节";
+        this.level1Chapter.chapter = [
+            [createMonsterChapter("battle", 0)],
+            [createEventChapter("shop", "weaponshop"), createEventChapter("rest", "blood")],
+            [createMonsterChapter("battle", 1)],
+            [createMonsterChapter("elite", 3)],
+            [createEventChapter("treasure", "treasure")],
+            [createMonsterChapter("boss", 5)],
+        ];
+    }
+
+    static getChapter(num:number){
+        if(num == 0){
+            return CreateChapter.level1Chapter;
+        }else{
+            return CreateChapter.defaultChapter;
+        }
+    }
+}
+
+
+
 export class CharmData{
     id:number = 0;
     name:string = "";

@@ -296,6 +296,16 @@
     "_id": "40XaA8hlFElI9uDLmznSVw"
   },
   {
+    "__type__": "c97286ajY5BfLVesaTVmGYv",
+    "_name": "",
+    "_objFlags": 0,
+    "node": {
+      "__id__": 5
+    },
+    "_enabled": true,
+    "_id": "884q0vlKRIWK8FzPWdlnW/"
+  },
+  {
     "__type__": "b95c3otmTJPV6mzlEsk7MI8",
     "_name": "",
     "_objFlags": 0,
@@ -305,19 +315,9 @@
     "_enabled": true,
     "gameConfig": null,
     "player": {
-      "__id__": 7
+      "__id__": 6
     },
-    "_id": "c4z+1u8NpFm766Npr9Tl7/"
-  },
-  {
-    "__type__": "c97286ajY5BfLVesaTVmGYv",
-    "_name": "",
-    "_objFlags": 0,
-    "node": {
-      "__id__": 5
-    },
-    "_enabled": true,
-    "_id": "884q0vlKRIWK8FzPWdlnW/"
+    "_id": "40J8OjONhBD5E9cetYBY5z"
   },
   {
     "__type__": "cc.Canvas",

@@ -103,7 +103,7 @@ export default class ResultPanel extends BaseUI{
     private onNextTurn(){
         UIManager.getInstance().closeUI(MainPanel);
         FaynUtils.PlayMusic("btnclick",false,1);
-        GameMain.curStage++;
+        GameMain.curStageIndex++;
         UIManager.getInstance().closeUI(ResultPanel);
         UIManager.getInstance().openUI(MainPanel, 0, (ui: MainPanel) => {
             ui.onShow();

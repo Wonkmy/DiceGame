@@ -1,9 +1,8 @@
 import HomePanel from "./Panels/HomePanel";
-import MainPanelRuntime from "./Panels/MainPanelRuntime";
 import { FaynUtils } from "./Global/FaynUtils";
 import TipPanel from "./Panels/TipPanel";
 import { UIManager } from "./UIManager/UIManager";
-import { CharmData, DiceType } from "./Global/DiceHandUtil";
+import { CharmData } from "./Global/DiceHandUtil";
 import Player from "./GameCodes/Player";
 
 const {ccclass, property} = cc._decorator;
@@ -23,7 +22,8 @@ export default class GameMain extends cc.Component {
     bundle:cc.AssetManager.Bundle = null!;
     private marketBgmStarted:boolean = false;
 
-    static curStage:number = 0;
+    static curChapterIndex:number = 0;
+    static curStageIndex:number = 0;
     static gameFinished:boolean = false;
 
 
@@ -36,7 +36,7 @@ export default class GameMain extends cc.Component {
         cc.director.getCollisionManager().enabled=true;
         cc.director.getPhysicsManager().enabled = true;
         GameMain.instance = this;
-        GameMain.curStage = 0;
+        GameMain.curChapterIndex = 0;
         if(CC_DEBUG){
             cc.assetManager.loadBundle("diceRougeArt",null!,(err,_bundle)=>{
                 this.bundle = _bundle

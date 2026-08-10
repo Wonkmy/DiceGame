@@ -1,7 +1,7 @@
 import GameMain from "../GameMain";
 import { FaynUtils } from "../Global/FaynUtils";
 import { BaseUI } from "../UIManager/BaseUI";
-import { CalculateData, chapterNodeConfig, CharmData, DiceHandResult, DiceNodePoint, DiceType, GetCalculateMultiple, getNoOverlapDicePositions, MonsterData, randomInt } from "../Global/DiceHandUtil";
+import { CalculateData, Chapter, CharmData, CreateChapter, DiceHandResult, DiceNodePoint, DiceType, GameChapter, GetCalculateMultiple, getNoOverlapDicePositions, MonsterData, randomInt } from "../Global/DiceHandUtil";
 import Dice from "../GameCodes/Dice";
 import Tip from "../GameCodes/Tip";
 import Monster from "../GameCodes/Monster";
@@ -11,6 +11,7 @@ import ResultPanel from "./ResultPanel";
 import BagPanel from "./BagPanel";
 import TipPanel from "./TipPanel";
 import RewardItem from "../UIManager/RewardItem";
+import ChapterPanel from "./ChapterPanel";
 
 const {ccclass, property} = cc._decorator;
 
@@ -74,13 +75,13 @@ export default class MainPanel extends BaseUI {
     onLoad(): void {
         MainPanel.instance = this;
         this.unusePointCount = 5;
+        this.loadData();
     }
 
     override onShow(): void {
         this.refreshAllUIText(0,0,0,null,true);
         GameMain.instance.player.init();
         GameMain.gameFinished = false;// 重置游戏结束标志位
-        this.loadData();
         this.loadGame();
 
         this.showCharmData();
@@ -342,6 +343,7 @@ export default class MainPanel extends BaseUI {
                 this.allCharmDatas.push(newCharmData);
             }
         })
+        CreateChapter.init();
     }
 
     loadDices(dTypes:DiceType[]) {
@@ -390,32 +392,47 @@ export default class MainPanel extends BaseUI {
     }
 
     loadChapter() {
-        let nodeData = chapterNodeConfig[GameMain.curStage][0];
-        if ((nodeData.type === "battle" || nodeData.type === "elite" || nodeData.type === "boss") && "monsterIds" in nodeData) {
-            this.openBattle(nodeData);
-        } else if (nodeData.type === "shop") {
-            // this.openShop(nodeData);
-        } else if (nodeData.type === "event") {
-            // this.openEvent(nodeData);
-        } else if (nodeData.type === "rest") {
-            // this.openRest(nodeData);
-        } else if (nodeData.type === "treasure") {
-            // this.openTreasure(nodeData);
+        let count:number = CreateChapter.getChapter(GameMain.curChapterIndex).chapter.length;// 当前关卡/章节有多少关
+        if(GameMain.curStageIndex>=count){
+            console.log(`当前${GameMain.curChapterIndex}章节已通关`);
+            return;
         }
+        // let nodeDatas: Chapter[] = CreateChapter.getChapter(GameMain.curChapterIndex).chapter[GameMain.curStageIndex];
+        // UIManager.getInstance().openUI(ChapterPanel, 1, (ui: ChapterPanel) => {
+        //     ui.onShow();
+        //     ui.setChapterNode(nodeDatas)
+        // })
+        let nodeGameDatas: GameChapter = CreateChapter.getChapter(GameMain.curChapterIndex);
+        UIManager.getInstance().openUI(ChapterPanel, 1, (ui: ChapterPanel) => {
+            ui.onShow();
+            ui.setChapterNode(nodeGameDatas)
+        })
     }
 
-    private openBattle(nodeData:any){
+    openShop(nodeData:Chapter){
+        console.log(nodeData.type);
+    }
+
+    openRest(nodeData:Chapter){
+        console.log(nodeData.type);
+    }
+
+    openTreasure(nodeData:Chapter){
+        console.log(nodeData.type);
+    }
+
+    openBattle(nodeData:Chapter){
         GameMain.instance.bundle.load("prefab/monster", cc.Prefab, (err, prefab: cc.Prefab) => {
-                let newMonster: cc.Node = cc.instantiate(prefab);
-                this.node.getChildByName("GamingContainer").addChild(newMonster);
-                let md: MonsterData = this.allMonsterDatas[nodeData.monsterIds]
-                newMonster.getComponent(Monster).init(md);
-                this.monster = newMonster.getComponent(Monster);
-            })
-            cc.tween(this.node.getChildByName("GamingContainer"))
-                .to(0.25,{opacity:255})
-                .start()
-            this.onReRoll();
+            let newMonster: cc.Node = cc.instantiate(prefab);
+            this.node.getChildByName("GamingContainer").addChild(newMonster);
+            let md: MonsterData = this.allMonsterDatas[nodeData.eventData.monsterIds]
+            newMonster.getComponent(Monster).init(md);
+            this.monster = newMonster.getComponent(Monster);
+        })
+        cc.tween(this.node.getChildByName("GamingContainer"))
+            .to(0.25, { opacity: 255 })
+            .start()
+        this.onReRoll();
     }
 
     disposeMonster(monster:Monster){
