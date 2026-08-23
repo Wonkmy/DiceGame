@@ -19,8 +19,6 @@ export default class ChapterPanel extends BaseUI {
     }
 
     setChapterNode(gameCapter:GameChapter){
-        console.dir(gameCapter);
-
         let nodeDatas: Chapter[] = gameCapter.chapter[GameMain.curStageIndex];
         this.node.getChildByName("chapter_title").getComponent(cc.Label).string = String(gameCapter.chapterName)
         this.node.getChildByName("stage_title").getComponent(cc.Label).string = `关卡${(GameMain.curStageIndex + 1)}`

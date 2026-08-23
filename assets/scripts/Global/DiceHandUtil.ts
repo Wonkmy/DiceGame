@@ -55,8 +55,9 @@ export class CreateChapter {
         this.level1Chapter.chapterName = "新手章节";
         this.level1Chapter.chapter = [
             [createMonsterChapter("battle", 0)],
-            [createEventChapter("shop", "weaponshop"), createEventChapter("rest", "blood")],
             [createMonsterChapter("battle", 1)],
+            [createMonsterChapter("battle", 1)],
+            [createEventChapter("shop", "weaponshop"), createEventChapter("rest", "blood")],
             [createMonsterChapter("elite", 3)],
             [createEventChapter("treasure", "treasure")],
             [createMonsterChapter("boss", 5)],

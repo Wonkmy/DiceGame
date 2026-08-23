@@ -1,44 +1,304 @@
 {
   "charms": [
     {
-      "id": "c001",
+      "id": 1,
       "name": "火焰骰子",
-      "type": "base",
-      "desc": "获得火焰骰子，参与攻击时，额外+3伤害",
+      "type": "dice",
+      "desc": "获得火焰骰子，参与攻击时额外+3伤害",
       "effect": "fire",
-      "num":3,
+      "num": 3,
       "icon": "c001_six_spark",
-      "useCount":-1
+      "useCount": -1
     },
     {
-      "id": "c002",
+      "id": 2,
       "name": "膨胀",
-      "type": "base",
+      "type": "point",
       "desc": "下次攻击时，额外+20点数，持续一局",
       "effect": "point",
-      "num":20,
-      "icon": "c001_six_spark",
-      "useCount":1
+      "num": 20,
+      "icon": "c002_even_stone",
+      "useCount": 1
     },
     {
-      "id": "c003",
-      "name": "治疗",
-      "type": "base",
-      "desc": "获得治疗骰子，参与攻击时,回复5生命值",
+      "id": 3,
+      "name": "治疗骰子",
+      "type": "dice",
+      "desc": "获得治疗骰子，参与攻击时回复5生命",
       "effect": "heal",
-      "num":5,
-      "icon": "c001_six_spark",
-      "useCount":-1
+      "num": 5,
+      "icon": "c003_low_dagger",
+      "useCount": -1
     },
     {
-      "id": "c027",
-      "name": "倍率骰子",
-      "type": "base",
-      "desc": "获得倍率骰子，参与攻击时，倍率+1",
+      "id": 4,
+      "name": "对子戒指",
+      "type": "hand",
+      "desc": "下次对子攻击时，额外+8点数",
+      "effect": "pairPoint",
+      "num": 8,
+      "icon": "c004_pair_ring",
+      "useCount": 1
+    },
+    {
+      "id": 5,
+      "name": "三条战鼓",
+      "type": "hand",
+      "desc": "下次三条攻击时，倍率+1",
+      "effect": "threeMult",
+      "num": 1,
+      "icon": "c005_triple_drum",
+      "useCount": 1
+    },
+    {
+      "id": 6,
+      "name": "顺子羽毛",
+      "type": "hand",
+      "desc": "下次顺子攻击时，额外+12点数",
+      "effect": "straightPoint",
+      "num": 12,
+      "icon": "c006_straight_feather",
+      "useCount": 1
+    },
+    {
+      "id": 7,
+      "name": "金币骰子",
+      "type": "dice",
+      "desc": "获得金币骰子，参与攻击时获得1金币",
+      "effect": "gold",
+      "num": 1,
+      "icon": "c007_gold_tooth",
+      "useCount": -1
+    },
+    {
+      "id": 8,
+      "name": "治疗骰子",
+      "type": "dice",
+      "desc": "获得治疗骰子，参与攻击时回复5生命",
+      "effect": "heal",
+      "num": 5,
+      "icon": "c008_heal_heart",
+      "useCount": -1
+    },
+    {
+      "id": 9,
+      "name": "护盾骰子",
+      "type": "dice",
+      "desc": "获得护盾骰子，参与攻击时获得3护盾",
+      "effect": "shield",
+      "num": 3,
+      "icon": "c009_small_shield",
+      "useCount": -1
+    },
+    {
+      "id": 10,
+      "name": "尘袋",
+      "type": "point",
+      "desc": "下次攻击直接额外+10点数",
+      "effect": "point",
+      "num": 10,
+      "icon": "c010_dust_bag",
+      "useCount": 1
+    },
+    {
+      "id": 11,
+      "name": "四条战旗",
+      "type": "hand",
+      "desc": "下次四条攻击时，倍率+2",
+      "effect": "fourMult",
+      "num": 2,
+      "icon": "c011_four_banner",
+      "useCount": 1
+    },
+    {
+      "id": 12,
+      "name": "高点王冠",
+      "type": "point",
+      "desc": "下次攻击中，每个5到6点骰子额外+3点数",
+      "effect": "highPoint",
+      "num": 3,
+      "icon": "c012_high_crown",
+      "useCount": 1
+    },
+    {
+      "id": 13,
+      "name": "奇数眼",
+      "type": "point",
+      "desc": "下次攻击中，每个奇数骰子额外+2点数",
+      "effect": "oddPoint",
+      "num": 2,
+      "icon": "c013_odd_eye",
+      "useCount": 1
+    },
+    {
+      "id": 14,
+      "name": "偶数铁砧",
+      "type": "mult",
+      "desc": "下次攻击中，如果包含偶数骰子，倍率+1",
+      "effect": "evenMult",
+      "num": 1,
+      "icon": "c014_even_anvil",
+      "useCount": 1
+    },
+    {
+      "id": 15,
+      "name": "复刻镜",
+      "type": "hand",
+      "desc": "下次攻击中，如果有重复点数，额外+10点数",
+      "effect": "repeatPoint",
+      "num": 10,
+      "icon": "c015_repeat_mirror",
+      "useCount": 1
+    },
+    {
+      "id": 16,
+      "name": "流沙钟",
+      "type": "mult",
+      "desc": "接下来2次攻击，倍率+1",
       "effect": "mult",
-      "num":1,
+      "num": 1,
+      "icon": "c016_flow_hourglass",
+      "useCount": 2
+    },
+    {
+      "id": 17,
+      "name": "弃骰钉",
+      "type": "point",
+      "desc": "下次攻击中，每个未参与牌型的骰子额外+4点数",
+      "effect": "unusedPoint",
+      "num": 4,
+      "icon": "c017_unused_nail",
+      "useCount": 1
+    },
+    {
+      "id": 18,
+      "name": "护甲钩",
+      "type": "defense",
+      "desc": "下次受到伤害时，减少5点伤害",
+      "effect": "defense",
+      "num": 5,
+      "icon": "c018_armor_hook",
+      "useCount": 1
+    },
+    {
+      "id": 19,
+      "name": "生命杯",
+      "type": "heal",
+      "desc": "立即回复15生命",
+      "effect": "hp",
+      "num": 15,
+      "icon": "c019_blood_cup",
+      "useCount": 1
+    },
+    {
+      "id": 20,
+      "name": "重掷骰子",
+      "type": "dice",
+      "desc": "获得重掷骰子，参与攻击时获得1次重掷",
+      "effect": "reroll",
+      "num": 1,
+      "icon": "c020_light_boot",
+      "useCount": -1
+    },
+    {
+      "id": 21,
+      "name": "万能一",
+      "type": "point",
+      "desc": "下次攻击中，每个1点骰子额外+8点数",
+      "effect": "onePoint",
+      "num": 8,
+      "icon": "c021_wild_one",
+      "useCount": 1
+    },
+    {
+      "id": 22,
+      "name": "缺口桥",
+      "type": "hand",
+      "desc": "下次顺子攻击时，倍率+1",
+      "effect": "straightMult",
+      "num": 1,
+      "icon": "c022_gap_bridge",
+      "useCount": 1
+    },
+    {
+      "id": 23,
+      "name": "双生符文",
+      "type": "hand",
+      "desc": "下次对子攻击时，倍率+1",
+      "effect": "pairMult",
+      "num": 1,
+      "icon": "c023_double_rune",
+      "useCount": 1
+    },
+    {
+      "id": 24,
+      "name": "贪婪王冠",
+      "type": "gold",
+      "desc": "下次击杀怪物时，额外获得8金币",
+      "effect": "killGold",
+      "num": 8,
+      "icon": "c024_greed_crown",
+      "useCount": 1
+    },
+    {
+      "id": 25,
+      "name": "尘核",
+      "type": "point",
+      "desc": "接下来3次攻击，额外+5点数",
+      "effect": "point",
+      "num": 5,
+      "icon": "c025_dust_core",
+      "useCount": 3
+    },
+    {
+      "id": 26,
+      "name": "终击符",
+      "type": "point",
+      "desc": "下次攻击如果怪物生命低于一半，额外+15点数",
+      "effect": "lowHpPoint",
+      "num": 15,
+      "icon": "c026_last_charm",
+      "useCount": 1
+    },
+    {
+      "id": 27,
+      "name": "倍率骰子",
+      "type": "dice",
+      "desc": "获得倍率骰子，参与攻击时倍率+1",
+      "effect": "mult",
+      "num": 1,
       "icon": "c027_mult_altar",
-      "useCount":-1
+      "useCount": -1
+    },
+    {
+      "id": 28,
+      "name": "高牌长矛",
+      "type": "hand",
+      "desc": "下次高牌攻击时，额外+12点数",
+      "effect": "singlePoint",
+      "num": 12,
+      "icon": "c028_single_spear",
+      "useCount": 1
+    },
+    {
+      "id": 29,
+      "name": "连战火苗",
+      "type": "point",
+      "desc": "接下来2次攻击，额外+6点数",
+      "effect": "point",
+      "num": 6,
+      "icon": "c029_streak_flame",
+      "useCount": 2
+    },
+    {
+      "id": 30,
+      "name": "毒骰子",
+      "type": "dice",
+      "desc": "获得毒骰子，参与攻击时给怪物1层毒",
+      "effect": "poison",
+      "num": 1,
+      "icon": "c030_dice_mark",
+      "useCount": -1
     }
   ]
 }

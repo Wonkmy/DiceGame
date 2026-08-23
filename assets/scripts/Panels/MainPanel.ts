@@ -108,6 +108,7 @@ export default class MainPanel extends BaseUI {
                 newRewardItem.scale = 0.75;
                 newRewardItem.getComponent(RewardItem).setOnlyClick(c);
                 newRewardItem.y = 0;
+                // 根据获得的下方"类buff"的构筑数据来增加初始点数或倍数。例如，下方有一个“下次攻击时，增加15额外点数”，那么这里就是在计算这些，然后存入额外点数数值中
                 if(c.useCount > 0){
                     if(c.effect === "point"){
                         GameMain.extraPoint += c.num;
@@ -180,6 +181,7 @@ export default class MainPanel extends BaseUI {
         let processedDice = new Set<cc.Node>();
         for (let i = 0; i < allPoint.length; i++) {
             const element = allPoint[i];
+            // 下面的判断是参与战斗的骰子是不是三选一的特殊骰子，是的话，直接按照类型以及对应的逻辑增加各种值
             this.selectedDice.forEach((d: cc.Node) => {
                 if (d.getComponent(Dice).finalIndex === element && !processedDice.has(d)) {
                     processedDice.add(d);
