@@ -12,6 +12,9 @@ import BagPanel from "./BagPanel";
 import TipPanel from "./TipPanel";
 import RewardItem from "../UIManager/RewardItem";
 import ChapterPanel from "./ChapterPanel";
+import DiceGameSave from "../GameCodes/DiceGameSave";
+import { Advertise } from "../GameCodes/Advertise";
+import HomePanel from "./HomePanel";
 
 const {ccclass, property} = cc._decorator;
 
@@ -31,10 +34,19 @@ export default class MainPanel extends BaseUI {
     allMonsterDatas:MonsterData[]=[]
     allCharmDatas:CharmData[]=[]
     monster:Monster = null!;
+    currentNodeData:Chapter = null!;
 
     allCharmItems:cc.Node[] = [];// 所有的加成item显示列表
 
     battlleIn:boolean = false;
+
+    // 前3个怪固定骰面：1教学、2有压力、3低输出高压力；第4个怪开始恢复随机
+    private fixedDicePointsByMonster:number[][] = [
+        [6, 6, 2, 4, 1],
+        [2, 2, 1, 4, 6],
+        [1, 1, 2, 4, 6],
+    ];
+    private hasUsedFixedDicePoints:boolean = false;
 
     @property({type:cc.Node})
     btn_onRoll:cc.Node = null!;// 重新扔出5个骰子，花费x金币
@@ -72,6 +84,8 @@ export default class MainPanel extends BaseUI {
     @property({type:cc.Node})
     attackbg:cc.Node = null!;
 
+    private homeBtn:cc.Node = null!;
+
     onLoad(): void {
         MainPanel.instance = this;
         this.unusePointCount = 5;
@@ -88,6 +102,7 @@ export default class MainPanel extends BaseUI {
 
         this.btn_start.on(cc.Node.EventType.TOUCH_END,this.onStartBattle,this)
         this.btn_openDicePackage.on(cc.Node.EventType.TOUCH_END,this.onOpenBagPanel,this)
+        this.createHomeBtn();
 
         this.node.getChildByName("GamingContainer").opacity = 0;
 
@@ -116,6 +131,44 @@ export default class MainPanel extends BaseUI {
                 }
             })
         }
+    }
+
+    private createHomeBtn(){
+        if(this.homeBtn)return;
+
+        this.homeBtn = new cc.Node("btn_home");
+        this.homeBtn.width = 110;
+        this.homeBtn.height = 54;
+        this.homeBtn.setPosition(-290, 570);
+        this.node.addChild(this.homeBtn);
+
+        let bg:cc.Graphics = this.homeBtn.addComponent(cc.Graphics);
+        bg.fillColor = cc.color(80, 52, 112, 255);
+        bg.strokeColor = cc.color(160, 125, 230, 255);
+        bg.lineWidth = 4;
+        bg.roundRect(-55, -27, 110, 54, 8);
+        bg.fill();
+        bg.stroke();
+
+        let labelNode:cc.Node = new cc.Node();
+        this.homeBtn.addChild(labelNode);
+        let label:cc.Label = labelNode.addComponent(cc.Label);
+        label.string = "主页";
+        label.fontSize = 28;
+        label.lineHeight = 34;
+        label.node.color = cc.Color.WHITE;
+
+        this.homeBtn.on(cc.Node.EventType.TOUCH_END, this.onBackHome, this);
+    }
+
+    private onBackHome(){
+        // 主动退出本局：已从主界面开始的挑战次数已经消耗；新用户首局不额外扣次数
+        GameMain.instance.resetRunData();
+        UIManager.getInstance().closeUI(ChapterPanel);
+        UIManager.getInstance().closeUI(MainPanel);
+        UIManager.getInstance().openUI(HomePanel, 0, (ui: HomePanel) => {
+            ui.onShow();
+        })
     }
 
     private refreshAllCharmItems(){
@@ -275,6 +328,8 @@ export default class MainPanel extends BaseUI {
         console.log("开始攻击，攻击力为" + totalAttack);
         let finalAttack = totalAttack + calculatorAttack;
         console.log("最终真实准备造成的伤害" + finalAttack);
+        DiceGameSave.recordDamage(finalAttack);
+        GameMain.instance.reportBestDamage(DiceGameSave.getBestDamage());
         this.monster.beHurt(finalAttack);
 
         let finalScale = Math.min((1.0 + (finalAttack * 0.03 / 10)),1.2)
@@ -372,6 +427,8 @@ export default class MainPanel extends BaseUI {
             );
             for (let i = 0; i < Math.min(this.unusePointCount, points.length); i++) {
                 let btn_openDicePackagePos = this.node.getChildByName("GamingContainer").getChildByName("btn_openDicePackage");
+                // 固定点数要在tween回调前先取好，否则标记位提前变化会导致首轮也变随机
+                let fixedPoint:number = this.getFixedDicePoint(i);
                 cc.tween(btn_openDicePackagePos)
                     .delay(i * 0.2)
                     .to(0.2, { scale: 1.2 })
@@ -383,20 +440,53 @@ export default class MainPanel extends BaseUI {
                         this.allDicesNodes.push(newDice);
                         const diceComp = newDice.getComponent(Dice);
                         if (diceComp) {
-                            diceComp.init(new cc.Vec2(btn_openDicePackagePos.x, btn_openDicePackagePos.y), points[i], i, dTypes[random]);
+                            diceComp.init(new cc.Vec2(btn_openDicePackagePos.x, btn_openDicePackagePos.y), points[i], i, dTypes[random], fixedPoint);
                         } else {
                             console.error(`第${i + 1}个骰子组件获取失败`);
                         }
                     })
                     .start()
             }
+
+            if(this.getCurBattleFixedDicePoints().length > 0 && this.hasUsedFixedDicePoints == false){
+                this.hasUsedFixedDicePoints = true;
+            }
         })
+    }
+
+    private getFixedDicePoint(index:number):number{
+        if(this.hasUsedFixedDicePoints){
+            return 0;
+        }
+
+        let fixedPoints:number[] = this.getCurBattleFixedDicePoints();
+        if(index < 0 || index >= fixedPoints.length){
+            return 0;
+        }
+
+        return fixedPoints[index];
+    }
+
+    private getCurBattleFixedDicePoints():number[]{
+        if(!this.currentNodeData || !this.currentNodeData.eventData){
+            return [];
+        }
+
+        let monsterId:number = this.currentNodeData.eventData.monsterIds;
+        if(monsterId < 0 || monsterId >= this.fixedDicePointsByMonster.length){
+            return [];
+        }
+
+        return this.fixedDicePointsByMonster[monsterId];
     }
 
     loadChapter() {
         let count:number = CreateChapter.getChapter(GameMain.curChapterIndex).chapter.length;// 当前关卡/章节有多少关
         if(GameMain.curStageIndex>=count){
             console.log(`当前${GameMain.curChapterIndex}章节已通关`);
+            GameMain.gameFinished = true;
+            GameMain.gameResultType = "chapterWin";
+            this.openResultPanel();
             return;
         }
         // let nodeDatas: Chapter[] = CreateChapter.getChapter(GameMain.curChapterIndex).chapter[GameMain.curStageIndex];
@@ -412,18 +502,36 @@ export default class MainPanel extends BaseUI {
     }
 
     openShop(nodeData:Chapter){
-        console.log(nodeData.type);
+        // 当前轻量版先不接商店构筑，保留入口并给明确提示。
+        GameMain.instance.showTip("商店功能后续开放");
+        GameMain.curStageIndex++;
+        this.scheduleOnce(() => {
+            this.loadChapter();
+        }, 0.1);
     }
 
     openRest(nodeData:Chapter){
-        console.log(nodeData.type);
+        // 当前轻量版先不做休息养成，保留入口并给明确提示。
+        GameMain.instance.player.addHp(25);
+        GameMain.instance.showTip("休息恢复25生命");
+        GameMain.curStageIndex++;
+        this.scheduleOnce(() => {
+            this.loadChapter();
+        }, 0.1);
     }
 
     openTreasure(nodeData:Chapter){
-        console.log(nodeData.type);
+        // 当前轻量版先不接宝箱构筑，保留入口并给明确提示。
+        GameMain.instance.showTip("宝箱功能后续开放");
+        GameMain.curStageIndex++;
+        this.scheduleOnce(() => {
+            this.loadChapter();
+        }, 0.1);
     }
 
     openBattle(nodeData:Chapter){
+        this.currentNodeData = nodeData;
+        this.hasUsedFixedDicePoints = false;
         GameMain.instance.bundle.load("prefab/monster", cc.Prefab, (err, prefab: cc.Prefab) => {
             let newMonster: cc.Node = cc.instantiate(prefab);
             this.node.getChildByName("GamingContainer").addChild(newMonster);
@@ -439,9 +547,19 @@ export default class MainPanel extends BaseUI {
 
     disposeMonster(monster:Monster){
         GameMain.gameFinished = true;
+        DiceGameSave.recordKill();
+        DiceGameSave.recordStage(GameMain.instance.getChallengeStageScore());
+        GameMain.instance.reportBestStage(DiceGameSave.getBestStage());
+        GameMain.instance.reportChallengeRank(DiceGameSave.getTodayBestStage());
+        GameMain.gameResultType = this.currentNodeData && this.currentNodeData.type === "boss" ? "chapterWin" : "stageWin";
         this.monster = null!;
         monster.node.destroy();
+        Advertise.showChapingAd();
 
+        this.openResultPanel();
+    }
+
+    openResultPanel(){
         UIManager.getInstance().openUI(ResultPanel, 0, (ui: ResultPanel) => {
             ui.onShow();
         })

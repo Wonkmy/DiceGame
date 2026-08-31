@@ -1,10 +1,14 @@
-import HomePanel from "./Panels/HomePanel";
+import LoadingPanel from "./Panels/LoadingPanel";
 import { FaynUtils } from "./Global/FaynUtils";
 import TipPanel from "./Panels/TipPanel";
 import { UIManager } from "./UIManager/UIManager";
 import { CharmData } from "./Global/DiceHandUtil";
 import Player from "./GameCodes/Player";
+import DiceGameSave from "./GameCodes/DiceGameSave";
+import ShareManager from "./GameCodes/ShareManager";
+import { Advertise } from "./GameCodes/Advertise";
 
+declare const wx: any;
 const {ccclass, property} = cc._decorator;
 
 @ccclass
@@ -25,6 +29,7 @@ export default class GameMain extends cc.Component {
     static curChapterIndex:number = 0;
     static curStageIndex:number = 0;
     static gameFinished:boolean = false;
+    static gameResultType:string = "stageWin";// stageWin:小关胜利 fail:失败 chapterWin:章节通关
 
 
     // 如果有道具或者三选一的功能是改变点数和倍率的，直接使用这两个
@@ -37,17 +42,21 @@ export default class GameMain extends cc.Component {
         cc.director.getPhysicsManager().enabled = true;
         GameMain.instance = this;
         GameMain.curChapterIndex = 0;
+        GameMain.curStageIndex = 0;
+        GameMain.gameFinished = false;
+        ShareManager.initShareMenu();
+        Advertise.init();
         if(CC_DEBUG){
             cc.assetManager.loadBundle("diceRougeArt",null!,(err,_bundle)=>{
                 this.bundle = _bundle
                 this.gameLoader();
             })
         }else{
-            // cc.assetManager.loadBundle("https://wonkmycloudfile.oss-cn-beijing.aliyuncs.com/jiuhuoArt",null!,(err,_bundle)=>{
+            // cc.assetManager.loadBundle("https://wonkmycloudfile.oss-cn-beijing.aliyuncs.com/diceRougeArt",null!,(err,_bundle)=>{
             //     this.bundle = _bundle
             //     this.gameLoader();
             // })
-            const ossUrl = "https://wonkmycloudfile.oss-cn-beijing.aliyuncs.com/jiuhuoArt";
+            const ossUrl = "https://wonkmycloudfile.oss-cn-beijing.aliyuncs.com/diceRougeArt";
             cc.assetManager.loadBundle(ossUrl + "?t=" + Date.now(), null!, (err, bundle) => {
                 if (err) {
                     console.error("OSS加载失败:", err);
@@ -63,7 +72,7 @@ export default class GameMain extends cc.Component {
 
 
     gameLoader(){
-        UIManager.getInstance().openUI(HomePanel,0,(ui:HomePanel)=>{
+        UIManager.getInstance().openUI(LoadingPanel,0,(ui:LoadingPanel)=>{
             ui.onShow();
         })
     }
@@ -80,5 +89,79 @@ export default class GameMain extends cc.Component {
         this.marketBgmStarted = true;
         // BGM只在进入游戏后播放一次，循环铺底，音量低于点击和反馈音效。
         FaynUtils.PlayMusic("marketbgm",true,0.35);
+    }
+
+    resetRunData(){
+        GameMain.curChapterIndex = 0;
+        GameMain.curStageIndex = 0;
+        GameMain.gameFinished = false;
+        GameMain.gameResultType = "stageWin";
+        GameMain.extraPoint = 0;
+        GameMain.extraMultiple = 0;
+        // 当前版本先弱化构筑，重开一局时清掉临时Charm。
+        GameMain.charmDatas = [];
+        DiceGameSave.resetCurrentGame();
+    }
+
+    getChallengeStageScore():number{
+        // 总成绩按章节累加，2章各10关，方便排行榜展示“今天冲到第几关”
+        return GameMain.curChapterIndex * 10 + GameMain.curStageIndex + 1;
+    }
+
+    reportBestDamage(damage:number){
+        if (cc.sys.platform != cc.sys.WECHAT_GAME || typeof wx === "undefined") {
+            return;
+        }
+
+        wx.setUserCloudStorage({
+            KVDataList: [
+                { key: "rk_damage", value: `${damage}` }
+            ],
+            success: () => {
+                console.log("最高一剑上报成功：" + damage);
+            },
+            fail: (err: any) => {
+                console.error("最高一剑上报失败：", err);
+            }
+        });
+    }
+
+    reportBestStage(stage:number){
+        if (cc.sys.platform != cc.sys.WECHAT_GAME || typeof wx === "undefined") {
+            return;
+        }
+
+        wx.setUserCloudStorage({
+            KVDataList: [
+                { key: "rk_stage", value: `${stage}` }
+            ],
+            success: () => {
+                console.log("最高关卡上报成功：" + stage);
+            },
+            fail: (err: any) => {
+                console.error("最高关卡上报失败：", err);
+            }
+        });
+    }
+
+    reportChallengeRank(stage:number){
+        if (cc.sys.platform != cc.sys.WECHAT_GAME || typeof wx === "undefined") {
+            return;
+        }
+
+        let regionName:string = DiceGameSave.getRegionName();
+        wx.setUserCloudStorage({
+            KVDataList: [
+                { key: "rk_today_stage", value: `${stage}` },
+                { key: "rk_region", value: regionName },
+                { key: "rk_region_stage", value: `${regionName}_${stage}` }
+            ],
+            success: () => {
+                console.log("今日挑战成绩上报成功：" + stage);
+            },
+            fail: (err: any) => {
+                console.error("今日挑战成绩上报失败：", err);
+            }
+        });
     }
 }

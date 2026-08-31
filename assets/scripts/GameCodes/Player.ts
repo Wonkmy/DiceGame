@@ -16,6 +16,11 @@ export default class Player extends cc.Component {
     attackNum:cc.Label = null!;
     attackbg:cc.Node = null!;
 
+    private attackNumStartX:number = 0;
+    private attackNumStartY:number = 0;
+    private attackBgStartX:number = 0;
+    private attackBgStartY:number = 0;
+
     public curSelectedDiceType:DiceType[] = [];
 
     init(){
@@ -23,12 +28,19 @@ export default class Player extends cc.Component {
         this.attackNum = MainPanel.instance.attackNum;
         this.attackbg = MainPanel.instance.attackbg;
 
+        this.attackNumStartX = this.attackNum.node.x;
+        this.attackNumStartY = this.attackNum.node.y;
+        this.attackBgStartX = this.attackbg.x;
+        this.attackBgStartY = this.attackbg.y;
+
         this.attackNum.node.active = false;
         this.attackbg.active = false;
         this.hpText.string = String(this.curHP);
     }
 
     getDices(){
+        this.myDices = [];
+        this.curSelectedDiceType = [];
         // 默认只有一种类型（普通）的骰子
         this.myDices.push(DiceType.normal);
         this.curSelectedDiceType.push(DiceType.normal);
@@ -73,6 +85,16 @@ export default class Player extends cc.Component {
     brHurt(v:number){
         this.curHP -= v;
 
+        // 每次受伤前都重置掉血文字状态，否则第一次动画把节点移走/透明后，第二次可能看不到
+        cc.Tween.stopAllByTarget(this.attackNum.node);
+        cc.Tween.stopAllByTarget(this.attackbg);
+        this.attackNum.node.x = this.attackNumStartX;
+        this.attackNum.node.y = this.attackNumStartY;
+        this.attackNum.node.opacity = 255;
+        this.attackbg.x = this.attackBgStartX;
+        this.attackbg.y = this.attackBgStartY;
+        this.attackbg.opacity = 255;
+
         this.attackNum.node.active = true;
         this.attackbg.active = true;
 
@@ -101,7 +123,9 @@ export default class Player extends cc.Component {
 
         this.hpText.string = String(this.curHP);
         if(this.curHP <= 0){
-            console.log("游戏结束");
+            GameMain.gameFinished = true;
+            GameMain.gameResultType = "fail";
+            MainPanel.instance.openResultPanel();
         }
     }
 }

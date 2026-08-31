@@ -26,11 +26,13 @@ export default class Dice extends cc.Component {
     diceType:DiceType = DiceType.normal;
 
     points:number[]=[]
+    fixedPoint:number = 0;
 
-    init(oldPos:cc.Vec2,targetPos:cc.Vec2,id:number,_diceType:DiceType){
+    init(oldPos:cc.Vec2,targetPos:cc.Vec2,id:number,_diceType:DiceType, fixedPoint:number = 0){
         this.points.push(1,2,3,4,5,6)
         this.node.position = new cc.Vec3(oldPos.x,oldPos.y,0);
         this.diceType = _diceType;
+        this.fixedPoint = fixedPoint;
 
         this.node.scale = 0;
         cc.tween(this.node)
@@ -123,9 +125,14 @@ export default class Dice extends cc.Component {
     }
 
     private doStartDice(){
-        let r:number = randomInt(0,this.points.length)
-        // this.finalIndex = Math.round(Math.random() * 5 + 1)
-        this.finalIndex = this.points[r]
+        if(this.fixedPoint >= 1 && this.fixedPoint <= 6){
+            // 前几只教学怪使用固定点数，方便控制新手难度节奏
+            this.finalIndex = this.fixedPoint;
+        }else{
+            let r:number = randomInt(0,this.points.length)
+            // this.finalIndex = Math.round(Math.random() * 5 + 1)
+            this.finalIndex = this.points[r]
+        }
         var newDiceNode:DiceNodePoint = new DiceNodePoint();
         newDiceNode.dicePoint = this.finalIndex;
         newDiceNode.diceNode = this.node;

@@ -35,6 +35,7 @@ function createEventChapter(type: string, eType: string): Chapter {
 
 export class CreateChapter {
     static level1Chapter: GameChapter = null!;
+    static level2Chapter: GameChapter = null!;
     static defaultChapter: GameChapter = null!;
     static init() {
         this.defaultChapter = new GameChapter();
@@ -42,11 +43,15 @@ export class CreateChapter {
         this.defaultChapter.chapterName = "默认章节";
         this.defaultChapter.chapter = [
             [createMonsterChapter("battle", 0)],
-            [createEventChapter("shop", "weaponshop"), createEventChapter("event", "event")],
             [createMonsterChapter("battle", 1)],
-            [createMonsterChapter("elite", 3)],
-            [createEventChapter("rest", "rest"), createEventChapter("treasure", "treasure")],
-            [createMonsterChapter("boss", 5)],
+            [createMonsterChapter("battle", 2)],
+            [createEventChapter("shop", "weaponshop"), createEventChapter("rest", "blood")],
+            [createMonsterChapter("battle", 3)],
+            [createMonsterChapter("elite", 4)],
+            [createEventChapter("shop", "weaponshop"), createEventChapter("treasure", "treasure")],
+            [createMonsterChapter("battle", 5)],
+            [createMonsterChapter("battle", 6)],
+            [createMonsterChapter("boss", 7)],
         ];
 
 
@@ -56,17 +61,38 @@ export class CreateChapter {
         this.level1Chapter.chapter = [
             [createMonsterChapter("battle", 0)],
             [createMonsterChapter("battle", 1)],
-            [createMonsterChapter("battle", 1)],
+            [createMonsterChapter("battle", 2)],
             [createEventChapter("shop", "weaponshop"), createEventChapter("rest", "blood")],
-            [createMonsterChapter("elite", 3)],
+            [createMonsterChapter("battle", 3)],
+            [createMonsterChapter("elite", 4)],
             [createEventChapter("treasure", "treasure")],
-            [createMonsterChapter("boss", 5)],
+            [createMonsterChapter("battle", 5)],
+            [createMonsterChapter("battle", 6)],
+            [createMonsterChapter("boss", 7)],
+        ];
+
+        this.level2Chapter = new GameChapter();
+        this.level2Chapter.level = 2;
+        this.level2Chapter.chapterName = "深渊章节";
+        this.level2Chapter.chapter = [
+            [createMonsterChapter("battle", 8)],
+            [createMonsterChapter("battle", 9)],
+            [createEventChapter("shop", "weaponshop"), createEventChapter("rest", "blood")],
+            [createMonsterChapter("battle", 10)],
+            [createMonsterChapter("elite", 11)],
+            [createEventChapter("treasure", "treasure")],
+            [createMonsterChapter("battle", 12)],
+            [createMonsterChapter("battle", 13)],
+            [createEventChapter("rest", "blood")],
+            [createMonsterChapter("boss", 14)],
         ];
     }
 
     static getChapter(num:number){
         if(num == 0){
             return CreateChapter.level1Chapter;
+        }else if(num == 1){
+            return CreateChapter.level2Chapter;
         }else{
             return CreateChapter.defaultChapter;
         }
@@ -192,17 +218,17 @@ export function GetTypeNameByType(_type: DiceHandType) {
 export function GetCalculateMultiple(_type: DiceHandType): CalculateData {
     switch (_type) {
         case DiceHandType.Single:
-            return new CalculateData(5, 1);
+            return new CalculateData(6, 1);
         case DiceHandType.Pair:
-            return new CalculateData(8, 1);
+            return new CalculateData(10, 1);
         case DiceHandType.Three:
-            return new CalculateData(14, 1);
+            return new CalculateData(18, 1);
         case DiceHandType.Four:
-            return new CalculateData(22, 2);
+            return new CalculateData(24, 2);
         case DiceHandType.Straight:
-            return new CalculateData(18, 2);
+            return new CalculateData(22, 2);
         default:
-            return new CalculateData(5,1);
+            return new CalculateData(6,1);
     }
 }
 
