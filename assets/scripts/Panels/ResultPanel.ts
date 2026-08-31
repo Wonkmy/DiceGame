@@ -20,10 +20,25 @@ export default class ResultPanel extends BaseUI{
     @property({type:cc.Node})
     threeChooseOneContainerNode:cc.Node = null!;
 
-    private homeBtn:cc.Node = null!;
+    @property({type:cc.Node, displayName:"分享复活按钮", tooltip:"失败后点击分享，可获得一次额外重新挑战机会"})
+    btn_shareHelp:cc.Node = null!;
+
+    @property({type:cc.Node, displayName:"回主界面按钮", tooltip:"失败或全部通关后返回主界面"})
+    btn_home:cc.Node = null!;
+
+    private sharingHelp:boolean = false;
 
     override onShow(): void {
+        this.btn_next.off(cc.Node.EventType.TOUCH_END,this.onNextTurn,this);
         this.btn_next.on(cc.Node.EventType.TOUCH_END,this.onNextTurn,this)
+        if(this.btn_shareHelp){
+            this.btn_shareHelp.off(cc.Node.EventType.TOUCH_END,this.onShareHelp,this);
+            this.btn_shareHelp.on(cc.Node.EventType.TOUCH_END,this.onShareHelp,this);
+        }
+        if(this.btn_home){
+            this.btn_home.off(cc.Node.EventType.TOUCH_END,this.onBackHome,this);
+            this.btn_home.on(cc.Node.EventType.TOUCH_END,this.onBackHome,this);
+        }
         this.refreshResultShow();
 
         // 之前这里会生成三选一Charm奖励。当前版本先弱化构筑，改成直接结算和进入下一关。
@@ -45,58 +60,53 @@ export default class ResultPanel extends BaseUI{
             resultText = "挑战失败";
             btnLabel.string = "重新挑战";
             this.showHomeBtn(true);
+            this.showShareHelpBtn(true);
         }else if(GameMain.gameResultType === "chapterWin"){
             resultText = GameMain.curChapterIndex >= 1 ? "全部通关" : "章节通关";
             btnLabel.string = GameMain.curChapterIndex >= 1 ? "再来一局" : "下一章节";
             this.showHomeBtn(GameMain.curChapterIndex >= 1);
+            this.showShareHelpBtn(false);
         }else{
             resultText = "胜利";
             btnLabel.string = "下一关";
             this.showHomeBtn(false);
+            this.showShareHelpBtn(false);
         }
 
         titleLabel.fontSize = 34;
         titleLabel.lineHeight = 46;
-        titleLabel.string = `${resultText}\n今日最好 ${DiceGameSave.getTodayBestStage()}关\n剩余挑战 ${DiceGameSave.getRemainDailyChallengeCount()}/${DiceGameSave.MAX_DAILY_CHALLENGE_COUNT}\n地区 ${DiceGameSave.getRegionName()}`;
+        titleLabel.string = `${resultText}\n今日最好 ${DiceGameSave.getTodayBestStage()}关\n剩余挑战 ${DiceGameSave.getRemainDailyChallengeCount()}/${DiceGameSave.MAX_DAILY_CHALLENGE_COUNT}\n分享复活 ${DiceGameSave.getRemainDailyShareHelpCount()}/${DiceGameSave.MAX_DAILY_SHARE_HELP_COUNT}\n地区 ${DiceGameSave.getRegionName()}`;
         titleLabel.node.off(cc.Node.EventType.TOUCH_END, ShareManager.shareBestDamage, ShareManager);
         titleLabel.node.on(cc.Node.EventType.TOUCH_END, ShareManager.shareBestDamage, ShareManager);
     }
 
+    private showShareHelpBtn(show:boolean){
+        if(this.btn_shareHelp){
+            this.btn_shareHelp.active = show;
+        }
+    }
+
     private showHomeBtn(show:boolean){
-        if(!show){
-            if(this.homeBtn){
-                this.homeBtn.active = false;
-            }
+        if(this.btn_home){
+            this.btn_home.active = show;
+        }
+
+        // 旧版这里会动态创建回主界面按钮；现在改为 Creator 面板拖拽 btn_home。
+    }
+
+    private onShareHelp(){
+        if(this.sharingHelp)return;
+
+        if(!DiceGameSave.consumeDailyShareHelpChance()){
+            GameMain.instance.showTip("今日分享复活次数已用完");
             return;
         }
 
-        if(!this.homeBtn){
-            this.homeBtn = new cc.Node("btn_back_home");
-            this.homeBtn.width = 260;
-            this.homeBtn.height = 72;
-            this.homeBtn.setPosition(0, -330);
-            this.node.addChild(this.homeBtn);
-
-            let bg:cc.Graphics = this.homeBtn.addComponent(cc.Graphics);
-            bg.fillColor = cc.color(65, 50, 92, 255);
-            bg.strokeColor = cc.color(160, 125, 230, 255);
-            bg.lineWidth = 4;
-            bg.roundRect(-130, -36, 260, 72, 8);
-            bg.fill();
-            bg.stroke();
-
-            let labelNode:cc.Node = new cc.Node();
-            this.homeBtn.addChild(labelNode);
-            let label:cc.Label = labelNode.addComponent(cc.Label);
-            label.string = "回到主界面";
-            label.fontSize = 30;
-            label.lineHeight = 38;
-            label.node.color = cc.Color.WHITE;
-
-            this.homeBtn.on(cc.Node.EventType.TOUCH_END, this.onBackHome, this);
-        }
-
-        this.homeBtn.active = true;
+        this.sharingHelp = true;
+        ShareManager.shareHelp(GameMain.instance.getChallengeStageScore(), () => {
+            this.sharingHelp = false;
+            this.restartGame();
+        });
     }
 
     private genThreeChooseRewardItem(){
@@ -188,7 +198,8 @@ export default class ResultPanel extends BaseUI{
                 return;
             }
             // 失败后重新挑战会消耗1次挑战次数；新用户首局本身没有扣次数
-            GameMain.instance.resetRunData();
+            this.restartGame();
+            return;
         }
 
         UIManager.getInstance().closeUI(MainPanel);
@@ -198,6 +209,16 @@ export default class ResultPanel extends BaseUI{
             if(GameMain.curStageIndex === 0){
                 GameMain.instance.player.getDices();
             }
+        })
+    }
+
+    private restartGame(){
+        GameMain.instance.resetRunData();
+        UIManager.getInstance().closeUI(MainPanel);
+        UIManager.getInstance().closeUI(ResultPanel);
+        UIManager.getInstance().openUI(MainPanel, 0, (ui: MainPanel) => {
+            ui.onShow();
+            GameMain.instance.player.getDices();
         })
     }
 
@@ -223,8 +244,11 @@ export default class ResultPanel extends BaseUI{
         if(titleNode){
             titleNode.off(cc.Node.EventType.TOUCH_END, ShareManager.shareBestDamage, ShareManager);
         }
-        if(this.homeBtn){
-            this.homeBtn.off(cc.Node.EventType.TOUCH_END, this.onBackHome, this);
+        if(this.btn_shareHelp){
+            this.btn_shareHelp.off(cc.Node.EventType.TOUCH_END, this.onShareHelp, this);
+        }
+        if(this.btn_home){
+            this.btn_home.off(cc.Node.EventType.TOUCH_END, this.onBackHome, this);
         }
     }
 }

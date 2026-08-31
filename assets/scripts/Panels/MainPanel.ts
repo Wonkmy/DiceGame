@@ -84,6 +84,9 @@ export default class MainPanel extends BaseUI {
     @property({type:cc.Node})
     attackbg:cc.Node = null!;
 
+    @property({type:cc.Label, displayName:"当前关卡文本", tooltip:"显示当前挑战进度，例如：第3关"})
+    curStageLabel:cc.Label = null!;
+
     private homeBtn:cc.Node = null!;
 
     onLoad(): void {
@@ -94,6 +97,7 @@ export default class MainPanel extends BaseUI {
 
     override onShow(): void {
         this.refreshAllUIText(0,0,0,null,true);
+        this.refreshCurStageLabel();
         GameMain.instance.player.init();
         GameMain.gameFinished = false;// 重置游戏结束标志位
         this.loadGame();
@@ -130,6 +134,12 @@ export default class MainPanel extends BaseUI {
                     }
                 }
             })
+        }
+    }
+
+    private refreshCurStageLabel(){
+        if(this.curStageLabel){
+            this.curStageLabel.string = `第${GameMain.instance.getChallengeStageScore()}关`;
         }
     }
 

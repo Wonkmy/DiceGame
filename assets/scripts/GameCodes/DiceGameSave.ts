@@ -3,6 +3,7 @@ export default class DiceGameSave {
     static currentKillCount: number = 0;
 
     static readonly MAX_DAILY_CHALLENGE_COUNT:number = 5;
+    static readonly MAX_DAILY_SHARE_HELP_COUNT:number = 1;
     private static readonly BEST_DAMAGE_KEY = "dice_best_damage";
     private static readonly BEST_STAGE_KEY = "dice_best_stage";
     private static readonly TOTAL_KILL_KEY = "dice_total_kill";
@@ -11,6 +12,7 @@ export default class DiceGameSave {
     private static readonly TODAY_BEST_STAGE_KEY = "dice_today_best_stage";
     private static readonly REGION_NAME_KEY = "dice_region_name";
     private static readonly NEW_USER_AUTO_PLAY_KEY = "dice_new_user_auto_play";
+    private static readonly DAILY_SHARE_HELP_USED_KEY = "dice_daily_share_help_used";
 
     static resetCurrentGame() {
         this.currentMaxDamage = 0;
@@ -66,6 +68,23 @@ export default class DiceGameSave {
         return true;
     }
 
+    static consumeDailyShareHelpChance():boolean{
+        this.checkDailyData();
+        let usedCount:number = Number(cc.sys.localStorage.getItem(this.DAILY_SHARE_HELP_USED_KEY)) || 0;
+        if(usedCount >= this.MAX_DAILY_SHARE_HELP_COUNT){
+            return false;
+        }
+
+        cc.sys.localStorage.setItem(this.DAILY_SHARE_HELP_USED_KEY, String(usedCount + 1));
+        return true;
+    }
+
+    static getRemainDailyShareHelpCount():number{
+        this.checkDailyData();
+        let usedCount:number = Number(cc.sys.localStorage.getItem(this.DAILY_SHARE_HELP_USED_KEY)) || 0;
+        return Math.max(this.MAX_DAILY_SHARE_HELP_COUNT - usedCount, 0);
+    }
+
     static canNewUserAutoPlay():boolean{
         return cc.sys.localStorage.getItem(this.NEW_USER_AUTO_PLAY_KEY) !== "1";
     }
@@ -109,6 +128,7 @@ export default class DiceGameSave {
         cc.sys.localStorage.setItem(this.DAILY_DATE_KEY, today);
         cc.sys.localStorage.setItem(this.DAILY_USED_KEY, "0");
         cc.sys.localStorage.setItem(this.TODAY_BEST_STAGE_KEY, "0");
+        cc.sys.localStorage.setItem(this.DAILY_SHARE_HELP_USED_KEY, "0");
     }
 
     private static getTodayKey():string{
