@@ -15,6 +15,7 @@ import ChapterPanel from "./ChapterPanel";
 import DiceGameSave from "../GameCodes/DiceGameSave";
 import { Advertise } from "../GameCodes/Advertise";
 import HomePanel from "./HomePanel";
+import DebugTool from "../GameCodes/DebugTool";
 
 const {ccclass, property} = cc._decorator;
 
@@ -107,6 +108,9 @@ export default class MainPanel extends BaseUI {
         this.btn_start.on(cc.Node.EventType.TOUCH_END,this.onStartBattle,this)
         this.btn_openDicePackage.on(cc.Node.EventType.TOUCH_END,this.onOpenBagPanel,this)
         this.createHomeBtn();
+        if(CC_DEBUG){
+            DebugTool.attach(this.node);
+        }
 
         this.node.getChildByName("GamingContainer").opacity = 0;
 

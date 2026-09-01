@@ -119,6 +119,48 @@ export default class DiceGameSave {
         cc.sys.localStorage.setItem(this.REGION_NAME_KEY, regionName);
     }
 
+    static debugClearAllSave(){
+        if(!CC_DEBUG)return;
+
+        // 调试用：清掉本游戏本地存档，方便重新测试新用户和每日次数流程。
+        cc.sys.localStorage.removeItem(this.BEST_DAMAGE_KEY);
+        cc.sys.localStorage.removeItem(this.BEST_STAGE_KEY);
+        cc.sys.localStorage.removeItem(this.TOTAL_KILL_KEY);
+        cc.sys.localStorage.removeItem(this.DAILY_DATE_KEY);
+        cc.sys.localStorage.removeItem(this.DAILY_USED_KEY);
+        cc.sys.localStorage.removeItem(this.TODAY_BEST_STAGE_KEY);
+        cc.sys.localStorage.removeItem(this.REGION_NAME_KEY);
+        cc.sys.localStorage.removeItem(this.NEW_USER_AUTO_PLAY_KEY);
+        cc.sys.localStorage.removeItem(this.DAILY_SHARE_HELP_USED_KEY);
+        this.resetCurrentGame();
+    }
+
+    static debugResetDailyData(){
+        if(!CC_DEBUG)return;
+
+        // 调试用：重置今日挑战次数、今日最好成绩和分享复活次数。
+        cc.sys.localStorage.setItem(this.DAILY_DATE_KEY, this.getTodayKey());
+        cc.sys.localStorage.setItem(this.DAILY_USED_KEY, "0");
+        cc.sys.localStorage.setItem(this.TODAY_BEST_STAGE_KEY, "0");
+        cc.sys.localStorage.setItem(this.DAILY_SHARE_HELP_USED_KEY, "0");
+    }
+
+    static debugSetNewUser(){
+        if(!CC_DEBUG)return;
+        cc.sys.localStorage.removeItem(this.NEW_USER_AUTO_PLAY_KEY);
+    }
+
+    static debugSetOldUser(){
+        if(!CC_DEBUG)return;
+        cc.sys.localStorage.setItem(this.NEW_USER_AUTO_PLAY_KEY, "1");
+    }
+
+    static debugResetShareHelp(){
+        if(!CC_DEBUG)return;
+        this.checkDailyData();
+        cc.sys.localStorage.setItem(this.DAILY_SHARE_HELP_USED_KEY, "0");
+    }
+
     private static checkDailyData(){
         let today:string = this.getTodayKey();
         let saveDate:string = cc.sys.localStorage.getItem(this.DAILY_DATE_KEY);

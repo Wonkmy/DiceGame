@@ -5,6 +5,7 @@ import MainPanel from "./MainPanel";
 import SettingPanel from "./SettingPanel";
 import ShareManager from "../GameCodes/ShareManager";
 import DiceGameSave from "../GameCodes/DiceGameSave";
+import DebugTool from "../GameCodes/DebugTool";
 
 const {ccclass, property} = cc._decorator;
 
@@ -38,6 +39,9 @@ export default class HomePanel extends BaseUI {
     override onShow(): void {
         this.bindHomeBtns();
         this.refreshStartView();
+        if(CC_DEBUG){
+            DebugTool.attach(this.node);
+        }
     }
 
     private bindHomeBtns(){
