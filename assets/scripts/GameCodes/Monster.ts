@@ -148,6 +148,10 @@ export default class Monster extends cc.Component {
         return this.curHp;
     }
 
+    getCurShield(){
+        return this.shiled;
+    }
+
     private loadTip(pos: cc.Vec2) {
         GameMain.instance.bundle.load("prefab/hitfx", cc.Prefab, (err, prefab: cc.Prefab) => {
             let newTip: cc.Node = cc.instantiate(prefab);

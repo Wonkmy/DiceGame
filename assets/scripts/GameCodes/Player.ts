@@ -80,6 +80,7 @@ export default class Player extends cc.Component {
         }
 
         this.hpText.string = String(this.curHP);
+        MainPanel.instance.refreshBattleWarningEffects();
     }
 
     brHurt(v:number){
@@ -122,6 +123,7 @@ export default class Player extends cc.Component {
         .start()
 
         this.hpText.string = String(this.curHP);
+        MainPanel.instance.refreshBattleWarningEffects();
         if(this.curHP <= 0){
             GameMain.gameFinished = true;
             GameMain.gameResultType = "fail";

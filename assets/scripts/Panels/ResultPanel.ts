@@ -29,6 +29,9 @@ export default class ResultPanel extends BaseUI{
     @property({type:cc.Node, displayName:"首胜艺术字节点", tooltip:"第1关胜利时显示的首胜艺术字图片节点"})
     firstWinArtNode:cc.Node = null!;
 
+    @property({type:cc.Node, displayName:"胜利艺术字节点", tooltip:"普通小关胜利时显示的胜利艺术字图片节点"})
+    winArtNode:cc.Node = null!;
+
     @property({type:cc.Node, displayName:"失败艺术字节点", tooltip:"挑战失败时显示的失败艺术字图片节点"})
     failArtNode:cc.Node = null!;
 
@@ -123,12 +126,13 @@ export default class ResultPanel extends BaseUI{
             this.showShareHelpBtn(false);
             this.showFailReview(false);
         }else{
-            // 第1关胜利给新手更强的正反馈，后续关卡仍使用普通胜利文案。
+            // 第1关胜利给新手更强的正反馈；普通胜利用艺术字表达，不再重复显示“胜利”文本。
             if(stageScore === 1){
                 resultText = "你已掌握对子攻击";
                 this.showFirstWinArt(true);
             }else{
-                resultText = "胜利";
+                resultText = "";
+                this.showWinArt(true);
             }
             btnLabel.string = "下一关";
             this.showHomeBtn(false);
@@ -141,7 +145,8 @@ export default class ResultPanel extends BaseUI{
         if(GameMain.gameResultType === "fail"){
             titleLabel.string = `${resultText}\n剩余挑战 ${DiceGameSave.getRemainDailyChallengeCount()}/${DiceGameSave.MAX_DAILY_CHALLENGE_COUNT}\n分享复活 ${DiceGameSave.getRemainDailyShareHelpCount()}/${DiceGameSave.MAX_DAILY_SHARE_HELP_COUNT}`;
         }else{
-            titleLabel.string = `${resultText}\n今日最好 ${todayBestStage}关\n超过本地区 ${overtakePercent}% 玩家\n剩余挑战 ${DiceGameSave.getRemainDailyChallengeCount()}/${DiceGameSave.MAX_DAILY_CHALLENGE_COUNT}\n分享复活 ${DiceGameSave.getRemainDailyShareHelpCount()}/${DiceGameSave.MAX_DAILY_SHARE_HELP_COUNT}\n地区 ${DiceGameSave.getRegionName()}`;
+            let resultPrefix:string = resultText.length > 0 ? resultText + "\n" : "";
+            titleLabel.string = `${resultPrefix}今日最好 ${todayBestStage}关\n超过本地区 ${overtakePercent}% 玩家\n剩余挑战 ${DiceGameSave.getRemainDailyChallengeCount()}/${DiceGameSave.MAX_DAILY_CHALLENGE_COUNT}\n分享复活 ${DiceGameSave.getRemainDailyShareHelpCount()}/${DiceGameSave.MAX_DAILY_SHARE_HELP_COUNT}\n地区 ${DiceGameSave.getRegionName()}`;
         }
         titleLabel.node.off(cc.Node.EventType.TOUCH_END, ShareManager.shareBestDamage, ShareManager);
         titleLabel.node.on(cc.Node.EventType.TOUCH_END, ShareManager.shareBestDamage, ShareManager);
@@ -228,6 +233,7 @@ export default class ResultPanel extends BaseUI{
     private hideAllResultArt(){
         // 共用一个结算预制体，先全部隐藏，再按结算类型显示对应艺术字。
         this.showFirstWinArt(false);
+        this.showWinArt(false);
         this.showFailArt(false);
         this.showChapterWinArt(false);
         this.showFailReview(false);
@@ -255,6 +261,28 @@ export default class ResultPanel extends BaseUI{
             this.firstWinArtNode.opacity = 255;
             this.firstWinArtNode.scale = 1;
             this.firstWinArtNode.angle = 0;
+        }
+    }
+
+    private showWinArt(show:boolean){
+        if(!this.winArtNode)return;
+
+        cc.Tween.stopAllByTarget(this.winArtNode);
+        this.winArtNode.active = show;
+
+        if(show){
+            // 普通胜利给明确正反馈，但强度弱于首胜和章节通关。
+            this.winArtNode.opacity = 0;
+            this.winArtNode.scale = 0.5;
+            this.winArtNode.angle = 0;
+            cc.tween(this.winArtNode)
+                .to(0.16, { opacity: 255, scale: 1.08 }, { easing: "backOut" })
+                .to(0.08, { scale: 1 })
+                .start();
+        }else{
+            this.winArtNode.opacity = 255;
+            this.winArtNode.scale = 1;
+            this.winArtNode.angle = 0;
         }
     }
 

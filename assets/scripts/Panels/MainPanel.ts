@@ -59,6 +59,12 @@ export default class MainPanel extends BaseUI {
     @property({type:cc.Node})
     health2d:cc.Node = null!;
 
+    @property({type:cc.Node, displayName:"斩杀提示特效", tooltip:"当前攻击力足够击杀怪物时显示，建议放在攻击按钮或剑附近"})
+    killReadyEffectNode:cc.Node = null!;
+
+    @property({type:cc.Node, displayName:"低血量警告特效", tooltip:"玩家血量较低时显示，建议放在血量图标附近"})
+    lowHpWarningNode:cc.Node = null!;
+
 
 
     onRollling:boolean = false;
@@ -91,14 +97,18 @@ export default class MainPanel extends BaseUI {
 
     private homeBtn:cc.Node = null!;
     private firstGuideTextOriginPos:cc.Vec2 = null!;
+    private killReadyEffectOriginScale:number = null!;
+    private lowHpWarningOriginScale:number = null!;
 
     onLoad(): void {
         MainPanel.instance = this;
         this.unusePointCount = 5;
+        this.hideBattleWarningEffects();
         this.loadData();
     }
 
     override onShow(): void {
+        this.hideBattleWarningEffects();
         this.refreshAllUIText(0,0,0,null,true);
         this.refreshCurStageLabel();
         GameMain.instance.player.init();
@@ -647,6 +657,7 @@ export default class MainPanel extends BaseUI {
             let md: MonsterData = this.allMonsterDatas[nodeData.eventData.monsterIds]
             newMonster.getComponent(Monster).init(md);
             this.monster = newMonster.getComponent(Monster);
+            this.refreshBattleWarningEffects();
         })
         cc.tween(this.node.getChildByName("GamingContainer"))
             .to(0.25, { opacity: 255 })
@@ -675,6 +686,7 @@ export default class MainPanel extends BaseUI {
     }
 
     openResultPanel(){
+        this.hideBattleWarningEffects();
         UIManager.getInstance().openUI(ResultPanel, 0, (ui: ResultPanel) => {
             ui.onShow();
         })
@@ -694,6 +706,7 @@ export default class MainPanel extends BaseUI {
             this.NumPointsText.string = p.toString();
             this.NumMultipleText.string = m.toString();
             this.TotalText.string = (p * m + totalAttack).toString();
+            this.refreshBattleWarningEffects();
         } else {
             setTimeout(() => {
                 this.NumPointsText.string = p.toString();
@@ -711,6 +724,7 @@ export default class MainPanel extends BaseUI {
                             setTimeout(() => {
                                 this.TotalText.string = (p * m + totalAttack).toString()
                                 this.nodeScale(this.TotalText.node)
+                                this.refreshBattleWarningEffects();
                                 this.NumPointsText.node.parent.active = false;
                                 this.NumMultipleText.node.parent.active = false;
                                 this.node.getChildByName("GamingContainer").getChildByName("x").active = false;
@@ -725,6 +739,7 @@ export default class MainPanel extends BaseUI {
                             this.cameraShake(1.06);
                             this.TotalText.string = (p * m).toString();
                             this.nodeScale(this.TotalText.node)
+                            this.refreshBattleWarningEffects();
                             this.NumPointsText.node.parent.active = false;
                             this.NumMultipleText.node.parent.active = false;
                             this.node.getChildByName("GamingContainer").getChildByName("x").active = false;
@@ -752,8 +767,91 @@ export default class MainPanel extends BaseUI {
         .start()
     }
 
+    refreshBattleWarningEffects(){
+        this.refreshKillReadyEffect();
+        this.refreshLowHpWarningEffect();
+    }
+
+    private hideBattleWarningEffects(){
+        this.setLoopEffectVisible(this.killReadyEffectNode, false, "kill");
+        this.setLoopEffectVisible(this.lowHpWarningNode, false, "lowHp");
+    }
+
+    private refreshKillReadyEffect(){
+        if(!this.killReadyEffectNode)return;
+
+        let show:boolean = false;
+        if(!GameMain.gameFinished && this.monster && this.calculateData){
+            let curAttack:number = this.calculateData.totalPoints * this.calculateData.totalMultiple;
+            // 怪物有护盾时，必须把护盾也算进去，避免提示“能杀”但实际杀不掉。
+            show = curAttack >= this.monster.getCurHp() + this.monster.getCurShield();
+        }
+
+        this.setLoopEffectVisible(this.killReadyEffectNode, show, "kill");
+    }
+
+    private refreshLowHpWarningEffect(){
+        if(!this.lowHpWarningNode)return;
+
+        let show:boolean = false;
+        if(GameMain.instance && GameMain.instance.player && GameMain.instance.player.totalHp > 0){
+            show = !GameMain.gameFinished && GameMain.instance.player.curHP > 0 && GameMain.instance.player.curHP <= GameMain.instance.player.totalHp * 0.3;
+        }
+
+        this.setLoopEffectVisible(this.lowHpWarningNode, show, "lowHp");
+    }
+
+    private setLoopEffectVisible(effectNode:cc.Node, show:boolean, effectType:string){
+        if(!effectNode || !cc.isValid(effectNode))return;
+
+        if(show){
+            if(effectNode.active)return;
+
+            effectNode.active = true;
+            effectNode.opacity = 0;
+            if(effectType === "kill"){
+                if(this.killReadyEffectOriginScale === null){
+                    this.killReadyEffectOriginScale = effectNode.scale;
+                }
+                this.playLoopEffectAnim(effectNode, this.killReadyEffectOriginScale);
+            }else{
+                if(this.lowHpWarningOriginScale === null){
+                    this.lowHpWarningOriginScale = effectNode.scale;
+                }
+                this.playLoopEffectAnim(effectNode, this.lowHpWarningOriginScale);
+            }
+        }else{
+            cc.Tween.stopAllByTarget(effectNode);
+            effectNode.active = false;
+        }
+    }
+
+    private playLoopEffectAnim(effectNode:cc.Node, originScale:number){
+        // 特效节点位置由预制体决定，这里只做原地呼吸，避免影响布局。
+        effectNode.scale = originScale * 0.9;
+        cc.tween(effectNode)
+            .repeatForever(
+                cc.tween()
+                    .parallel(
+                        cc.tween().to(0.35, { opacity: 220 }),
+                        cc.tween().to(0.35, { scale: originScale * 1.08 })
+                    )
+                    .parallel(
+                        cc.tween().to(0.35, { opacity: 110 }),
+                        cc.tween().to(0.35, { scale: originScale * 0.94 })
+                    )
+            )
+            .start();
+    }
+
     override onDestroy(): void {
         // this.btn_onRoll.off(cc.Node.EventType.TOUCH_END,this.onReRoll,this)
+        if(this.killReadyEffectNode && cc.isValid(this.killReadyEffectNode)){
+            cc.Tween.stopAllByTarget(this.killReadyEffectNode);
+        }
+        if(this.lowHpWarningNode && cc.isValid(this.lowHpWarningNode)){
+            cc.Tween.stopAllByTarget(this.lowHpWarningNode);
+        }
         this.btn_start.off(cc.Node.EventType.TOUCH_END,this.onStartBattle,this)
         this.btn_openDicePackage.off(cc.Node.EventType.TOUCH_END,this.onOpenBagPanel,this)
         this.calculateData = null!;
