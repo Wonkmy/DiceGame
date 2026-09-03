@@ -45,8 +45,8 @@ export class CreateChapter {
             [createMonsterChapter("battle", 0)],
             [createMonsterChapter("battle", 1)],
             [createMonsterChapter("battle", 2)],
-            [createEventChapter("shop", "weaponshop"), createEventChapter("rest", "blood")],
             [createMonsterChapter("battle", 3)],
+            [createEventChapter("shop", "weaponshop"), createEventChapter("rest", "blood")],
             [createMonsterChapter("elite", 4)],
             [createEventChapter("shop", "weaponshop"), createEventChapter("treasure", "treasure")],
             [createMonsterChapter("battle", 5)],
@@ -62,8 +62,8 @@ export class CreateChapter {
             [createMonsterChapter("battle", 0)],
             [createMonsterChapter("battle", 1)],
             [createMonsterChapter("battle", 2)],
-            [createEventChapter("shop", "weaponshop"), createEventChapter("rest", "blood")],
             [createMonsterChapter("battle", 3)],
+            [createEventChapter("shop", "weaponshop"), createEventChapter("rest", "blood")],
             [createMonsterChapter("elite", 4)],
             [createEventChapter("treasure", "treasure")],
             [createMonsterChapter("battle", 5)],
@@ -82,9 +82,9 @@ export class CreateChapter {
             [createMonsterChapter("elite", 11)],
             [createEventChapter("treasure", "treasure")],
             [createMonsterChapter("battle", 12)],
-            [createMonsterChapter("battle", 13)],
+            [createMonsterChapter("battle", 16)],
             [createEventChapter("rest", "blood")],
-            [createMonsterChapter("boss", 14)],
+            [createMonsterChapter("boss", 19)],
         ];
     }
 

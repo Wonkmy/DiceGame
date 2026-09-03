@@ -1,7 +1,6 @@
 import { ExpertDef } from "../GameCodes/Datas/GameData";
 import GameMain from "../GameMain";
 import { FaynUtils } from "../Global/FaynUtils";
-import HirePanel from "../Panels/HirePanel";
 import { UIManager } from "./UIManager";
 
 const {ccclass, property} = cc._decorator;

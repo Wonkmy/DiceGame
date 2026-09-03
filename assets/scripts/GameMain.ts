@@ -30,6 +30,7 @@ export default class GameMain extends cc.Component {
     static curStageIndex:number = 0;
     static gameFinished:boolean = false;
     static gameResultType:string = "stageWin";// stageWin:小关胜利 fail:失败 chapterWin:章节通关
+    static isNewUserFirstPlay:boolean = false;// 本次启动是否为新用户自动进入的首局
 
 
     // 如果有道具或者三选一的功能是改变点数和倍率的，直接使用这两个
@@ -103,6 +104,17 @@ export default class GameMain extends cc.Component {
         DiceGameSave.resetCurrentGame();
     }
 
+    restartCurChapterRun(){
+        // 失败后本局重开：保留当前章节，只回到本章第1关，避免玩家通关第1章后又被打回最开始。
+        GameMain.curStageIndex = 0;
+        GameMain.gameFinished = false;
+        GameMain.gameResultType = "stageWin";
+        GameMain.extraPoint = 0;
+        GameMain.extraMultiple = 0;
+        GameMain.charmDatas = [];
+        DiceGameSave.resetCurrentGame();
+    }
+
     getChallengeStageScore():number{
         // 总成绩按章节累加，2章各10关，方便排行榜展示“今天冲到第几关”
         return GameMain.curChapterIndex * 10 + GameMain.curStageIndex + 1;
@@ -142,6 +154,13 @@ export default class GameMain extends cc.Component {
                 console.error("最高关卡上报失败：", err);
             }
         });
+    }
+
+    reportTodayChallengeResult(){
+        // 结算和返回主页时补记一次，避免失败或中途返回导致今日榜成绩漏上报。
+        DiceGameSave.recordStage(this.getChallengeStageScore());
+        this.reportBestStage(DiceGameSave.getBestStage());
+        this.reportChallengeRank(DiceGameSave.getTodayBestStage());
     }
 
     reportChallengeRank(stage:number){

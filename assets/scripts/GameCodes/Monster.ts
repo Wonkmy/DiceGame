@@ -73,7 +73,7 @@ export default class Monster extends cc.Component {
     private onDie(){
         let _view = this.node.getChildByName("view");
         cc.tween(_view)
-            .to(1.8,{opacity:0})
+            .to(1.0,{opacity:0})
             .call(()=>{
                 MainPanel.instance.disposeMonster(this);
             })

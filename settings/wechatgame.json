@@ -1,8 +1,8 @@
 {
-  "appid": "",
+  "appid": "wx95b659fd6d604ea4",
   "orientation": "portrait",
   "separate_engine": false,
-  "REMOTE_SERVER_ROOT": "https://wonkmycloudfile.oss-cn-beijing.aliyuncs.com",
-  "subContext": "",
+  "REMOTE_SERVER_ROOT": "",
+  "subContext": "openDataContext",
   "startSceneAssetBundle": false
 }

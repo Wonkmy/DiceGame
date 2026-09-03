@@ -77,6 +77,7 @@ export default class Dice extends cc.Component {
 
         MainPanel.instance.curDiceHandResult = getDiceHandResult(MainPanel.instance.selectedDicePoint);
         console.log("当前选择的点数型是:" + GetTypeNameByType(MainPanel.instance.curDiceHandResult.type));
+        MainPanel.instance.refreshFirstGuideAfterSelect();
         let _type = MainPanel.instance.curDiceHandResult.type;
         MainPanel.instance.switchHandType(DiceHandType[_type]);
         if (MainPanel.instance.curDiceHandResult.type > 0) {

@@ -176,16 +176,19 @@ export default class DebugTool {
 
     private static resetDaily(){
         DiceGameSave.debugResetDailyData();
+        this.refreshHomePanel();
         GameMain.instance.showTip("调试：今日次数已重置");
     }
 
     private static resetShareHelp(){
         DiceGameSave.debugResetShareHelp();
+        this.refreshHomePanel();
         GameMain.instance.showTip("调试：分享复活已重置");
     }
 
     private static clearSave(){
         DiceGameSave.debugClearAllSave();
+        this.refreshHomePanel();
         GameMain.instance.showTip("调试：本地存档已清除");
     }
 
@@ -197,5 +200,12 @@ export default class DebugTool {
     private static setOldUser(){
         DiceGameSave.debugSetOldUser();
         GameMain.instance.showTip("调试：已设为老用户");
+    }
+
+    private static refreshHomePanel(){
+        if(HomePanel.instance){
+            // 调试按钮修改本地存档后，立即刷新主界面的次数和按钮文案。
+            HomePanel.instance.refreshStartView();
+        }
     }
 }

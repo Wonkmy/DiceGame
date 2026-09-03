@@ -46,6 +46,7 @@ export default class LoadingPanel extends BaseUI {
 
         if(DiceGameSave.canNewUserAutoPlay()){
             // 新用户首局直接进游戏，不消耗挑战次数
+            GameMain.isNewUserFirstPlay = true;
             DiceGameSave.markNewUserAutoPlayed();
             UIManager.getInstance().openUI(MainPanel,0,(ui:MainPanel)=>{
                 ui.onShow();

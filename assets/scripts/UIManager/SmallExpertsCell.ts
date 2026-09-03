@@ -8,7 +8,6 @@
 import { ExpertDef } from "../GameCodes/Datas/GameData";
 import GameMain from "../GameMain";
 import { FaynUtils } from "../Global/FaynUtils";
-import ExpertTipPanel from "../Panels/ExpertTipPanel";
 import TipPanel from "../Panels/TipPanel";
 import { UIManager } from "./UIManager";
 

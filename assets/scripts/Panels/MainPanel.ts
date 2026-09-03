@@ -1,7 +1,7 @@
 import GameMain from "../GameMain";
 import { FaynUtils } from "../Global/FaynUtils";
 import { BaseUI } from "../UIManager/BaseUI";
-import { CalculateData, Chapter, CharmData, CreateChapter, DiceHandResult, DiceNodePoint, DiceType, GameChapter, GetCalculateMultiple, getNoOverlapDicePositions, MonsterData, randomInt } from "../Global/DiceHandUtil";
+import { CalculateData, Chapter, CharmData, CreateChapter, DiceHandResult, DiceHandType, DiceNodePoint, DiceType, GameChapter, GetCalculateMultiple, getNoOverlapDicePositions, MonsterData, randomInt } from "../Global/DiceHandUtil";
 import Dice from "../GameCodes/Dice";
 import Tip from "../GameCodes/Tip";
 import Monster from "../GameCodes/Monster";
@@ -48,6 +48,7 @@ export default class MainPanel extends BaseUI {
         [1, 1, 2, 4, 6],
     ];
     private hasUsedFixedDicePoints:boolean = false;
+    private firstGuideActive:boolean = false;
 
     @property({type:cc.Node})
     btn_onRoll:cc.Node = null!;// 重新扔出5个骰子，花费x金币
@@ -89,6 +90,7 @@ export default class MainPanel extends BaseUI {
     curStageLabel:cc.Label = null!;
 
     private homeBtn:cc.Node = null!;
+    private firstGuideTextOriginPos:cc.Vec2 = null!;
 
     onLoad(): void {
         MainPanel.instance = this;
@@ -113,6 +115,10 @@ export default class MainPanel extends BaseUI {
         }
 
         this.node.getChildByName("GamingContainer").opacity = 0;
+        if(this.testip){
+            let guideRoot:cc.Node = this.getGuideTipRoot();
+            this.firstGuideTextOriginPos = new cc.Vec2(guideRoot.x, guideRoot.y);
+        }
 
         cc.tween(this.testip.node)
             .repeatForever(
@@ -143,7 +149,7 @@ export default class MainPanel extends BaseUI {
 
     private refreshCurStageLabel(){
         if(this.curStageLabel){
-            this.curStageLabel.string = `第${GameMain.instance.getChallengeStageScore()}关`;
+            this.curStageLabel.string = `当前第${GameMain.instance.getChallengeStageScore()}关`;
         }
     }
 
@@ -177,6 +183,7 @@ export default class MainPanel extends BaseUI {
 
     private onBackHome(){
         // 主动退出本局：已从主界面开始的挑战次数已经消耗；新用户首局不额外扣次数
+        GameMain.instance.reportTodayChallengeResult();
         GameMain.instance.resetRunData();
         UIManager.getInstance().closeUI(ChapterPanel);
         UIManager.getInstance().closeUI(MainPanel);
@@ -231,8 +238,15 @@ export default class MainPanel extends BaseUI {
             })
             return;
         }
+        if(this.firstGuideActive && this.curDiceHandResult.type !== DiceHandType.Pair){
+            GameMain.instance.showTip("先凑成对子，再点击攻击");
+            return;
+        }
         if (this.battlleIn) return;
         this.battlleIn = true;
+        if(this.testip){
+            this.getGuideTipRoot().active = false;
+        }
         let data = GetCalculateMultiple(this.curDiceHandResult.type);
         let allPoint: number[] = this.curDiceHandResult.usedDicePoint;
         let unusePoint: number[] = this.curDiceHandResult.unusedDicePoint;
@@ -464,8 +478,89 @@ export default class MainPanel extends BaseUI {
 
             if(this.getCurBattleFixedDicePoints().length > 0 && this.hasUsedFixedDicePoints == false){
                 this.hasUsedFixedDicePoints = true;
+                this.tryStartFirstGuide();
             }
         })
+    }
+
+    private tryStartFirstGuide(){
+        if(DiceGameSave.hasFinishFirstGuide())return;
+        if(!GameMain.isNewUserFirstPlay)return;
+        if(GameMain.curChapterIndex !== 0 || GameMain.curStageIndex !== 0)return;
+
+        this.firstGuideActive = true;
+        this.showFirstGuideText("点选两个6点骰子，凑成对子", false);
+    }
+
+    private showFirstGuideText(text:string, nearAttackBtn:boolean = false){
+        if(!this.testip)return;
+
+        let guideRoot:cc.Node = this.getGuideTipRoot();
+        guideRoot.active = true;
+        guideRoot.opacity = 255;
+        guideRoot.zIndex = 999;
+        this.testip.node.active = true;
+        this.testip.node.opacity = 255;
+        this.testip.node.zIndex = 1;
+        this.testip.string = text;
+        this.testip.fontSize = 30;
+        if(nearAttackBtn){
+            this.moveGuideTextToAttackBtnBottom();
+        }else{
+            this.resetGuideTextPos();
+        }
+    }
+
+    private resetGuideTextPos(){
+        if(!this.testip || !this.firstGuideTextOriginPos)return;
+        this.getGuideTipRoot().setPosition(this.firstGuideTextOriginPos);
+    }
+
+    private moveGuideTextToAttackBtnBottom(){
+        if(!this.testip || !this.btn_start || !this.btn_start.parent)return;
+
+        // 攻击按钮和提示文本可能不在同一父节点下，先转世界坐标，再转回提示文本父节点坐标。
+        let guideRoot:cc.Node = this.getGuideTipRoot();
+        if(!guideRoot.parent)return;
+        let btnWorldPos:cc.Vec2 = this.btn_start.parent.convertToWorldSpaceAR(this.btn_start.position);
+        let worldPos:cc.Vec2 = new cc.Vec2(btnWorldPos.x, btnWorldPos.y - 52);
+        let localPos:cc.Vec2 = guideRoot.parent.convertToNodeSpaceAR(worldPos);
+        guideRoot.setPosition(localPos);
+    }
+
+    private getGuideTipRoot():cc.Node{
+        if(this.testip && this.testip.node.parent && this.testip.node.parent.name === "TipBg"){
+            return this.testip.node.parent;
+        }
+
+        return this.testip.node;
+    }
+
+    refreshFirstGuideAfterSelect(){
+        if(!this.firstGuideActive)return;
+
+        if(!this.curDiceHandResult || this.selectedDice.length <= 0){
+            this.showFirstGuideText("点选两个6点骰子，凑成对子", false);
+            return;
+        }
+
+        if(this.curDiceHandResult.type === DiceHandType.Pair){
+            this.showFirstGuideText("对子已组成，点击攻击↑", true);
+            this.playGuideAttackBtnTip();
+        }else{
+            this.showFirstGuideText("继续点另一个相同点数骰子", false);
+        }
+    }
+
+    private playGuideAttackBtnTip(){
+        if(!this.btn_start)return;
+
+        // 只做一次轻微缩放提示，不改变按钮原始缩放值。
+        let oldScale:number = this.btn_start.scale;
+        cc.tween(this.btn_start)
+            .to(0.12, { scale: oldScale * 1.08 })
+            .to(0.12, { scale: oldScale })
+            .start();
     }
 
     private getFixedDicePoint(index:number):number{
@@ -566,6 +661,12 @@ export default class MainPanel extends BaseUI {
         GameMain.instance.reportBestStage(DiceGameSave.getBestStage());
         GameMain.instance.reportChallengeRank(DiceGameSave.getTodayBestStage());
         GameMain.gameResultType = this.currentNodeData && this.currentNodeData.type === "boss" ? "chapterWin" : "stageWin";
+        if(this.firstGuideActive){
+            // 首局第一个怪击杀后结束引导，之后不再反复打扰玩家。
+            this.firstGuideActive = false;
+            GameMain.isNewUserFirstPlay = false;
+            DiceGameSave.markFirstGuideDone();
+        }
         this.monster = null!;
         monster.node.destroy();
         Advertise.showChapingAd();
