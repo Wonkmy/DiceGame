@@ -73,8 +73,9 @@ export default class Monster extends cc.Component {
 
         this.loadTip(new cc.Vec2(0,0));// 释放一个被击打特效
         this.scaleAnim(this.node.getChildByName("view"))
-        this.refreshHP_Slider();
-        this.refreshLowHpFeedback();
+        this.refreshHP_Slider(false, () => {
+            this.refreshLowHpFeedback();
+        });
         if(this.curHp <= 0){
             this.scheduleOnce(this.onDie,1);
         }
@@ -179,12 +180,70 @@ export default class Monster extends cc.Component {
         }, 0.18);
     }
 
-    private refreshHP_Slider(){
-        this.hpSlider.width = this.maxValue * (this.curHp / this.totalHp);
-        if(this.hpSlider.width <=0){
-            this.hpSlider.width = 0;
+    /**
+     * 刷新怪物血条。
+     * immediate 为 true 时直接刷新，受击时传 false 播放一次血条受击反馈。
+     */
+    private refreshHP_Slider(immediate:boolean = true, callBack:any = null){
+        let targetWidth:number = this.maxValue * (this.curHp / this.totalHp);
+        if(targetWidth <= 0){
+            targetWidth = 0;
         }
         this.hpText.string = `${this.curHp}/${this.totalHp}`;
+
+        if(immediate){
+            this.hpSlider.width = targetWidth;
+            if(callBack){
+                callBack();
+            }
+            return;
+        }
+
+        this.playHpHurtFeedback(targetWidth, callBack);
+    }
+
+    /**
+     * 播放怪物血条受击反馈。
+     * 只处理血条的闪烁和轻微抖动，不参与伤害计算。
+     */
+    private playHpHurtFeedback(targetWidth:number, callBack:any = null){
+        if(!this.hpSlider || !cc.isValid(this.hpSlider)){
+            if(callBack){
+                callBack();
+            }
+            return;
+        }
+
+        let hpBg:cc.Node = this.node.getChildByName("hp_bg");
+        let oldX:number = hpBg ? hpBg.x : 0;
+
+        cc.Tween.stopAllByTarget(this.hpSlider);
+        // 先保证血条显示正确，再播反馈，避免动画异常时仍显示满血。
+        this.hpSlider.width = targetWidth;
+        this.hpSlider.opacity = 255;
+
+        if(hpBg && cc.isValid(hpBg)){
+            cc.Tween.stopAllByTarget(hpBg);
+            hpBg.x = oldX;
+            cc.tween(hpBg)
+                .to(0.03, { x: oldX - 6 })
+                .to(0.03, { x: oldX + 6 })
+                .to(0.03, { x: oldX })
+                .start();
+        }
+
+        cc.tween(this.hpSlider)
+            .to(0.06, { opacity: 80 })
+            .to(0.06, { opacity: 255 })
+            .to(0.06, { opacity: 120 })
+            .to(0.06, { opacity: 255 })
+            .call(() => {
+                this.hpSlider.opacity = this.hpSliderOriginOpacity;
+                if(callBack){
+                    callBack();
+                }
+            })
+            .start();
     }
 
     /**

@@ -43,6 +43,7 @@ export default class Dice extends cc.Component {
             )
             .call(()=>{
                 MainPanel.instance.testip.node.active = true;
+                this.playLandingFeedback();
                 this.doStartDice()
             })
             .start()
@@ -141,6 +142,43 @@ export default class Dice extends cc.Component {
         newDiceNode.diceType = this.diceType;
         this.startDice = true;
     }
+
+    /**
+     * 播放骰子落点反馈。
+     * 只做落地弹一下和短暂提亮，不改骰子点数、类型和生成规则。
+     */
+    private playLandingFeedback(){
+        let viewNode:cc.Node = this.node.getChildByName("view");
+        if(!viewNode || !cc.isValid(viewNode))return;
+
+        cc.Tween.stopAllByTarget(viewNode);
+
+        this.node.scale = 1;
+        viewNode.scale = 1;
+        viewNode.color = cc.color(255, 240, 150, 255);
+
+        this.scheduleOnce(() => {
+            if(!this.node || !cc.isValid(this.node))return;
+            cc.tween(this.node)
+                // 落地时先轻微压缩，再明显弹起，最后回到正常大小
+                .to(0.06, { scale: 0.88 })
+                .to(0.12, { scale: 1.22 }, { easing: "backOut" })
+                .to(0.08, { scale: 0.98 })
+                .to(0.06, { scale: 1 })
+                .start();
+        }, 0);
+
+        cc.tween(viewNode)
+            .delay(0.08)
+            .to(0.16, { scale: 1.04 })
+            .call(() => {
+                if(!viewNode || !cc.isValid(viewNode))return;
+                viewNode.color = cc.Color.WHITE;
+                viewNode.scale = 1;
+            })
+            .start();
+    }
+
     private changeDiceSp(){
         this.curIndex++;
         if (this.curIndex > 5) {

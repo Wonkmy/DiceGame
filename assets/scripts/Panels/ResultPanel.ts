@@ -659,7 +659,7 @@ export default class ResultPanel extends BaseUI{
         if(monster && cc.isValid(monster.node)){
             let leftHp:number = Math.max(monster.getCurHp(), 0);
             if(leftHp > 0){
-                return `怪物还剩 ${leftHp} 血，下把多凑一个牌型就能过`;
+                return this.getMonsterLeftHpReview(leftHp, monster.totalHp, monster.getCurAttack());
             }
         }
 
@@ -669,6 +669,37 @@ export default class ResultPanel extends BaseUI{
         }
 
         return "已经很接近了，下把优先凑高倍率牌型";
+    }
+
+    /**
+     * 根据怪物剩余血量和攻击压力生成失败复盘。
+     * 只负责结算文案，不影响战斗、复活和排行榜逻辑。
+     */
+    private getMonsterLeftHpReview(leftHp:number, totalHp:number, monsterAttack:number):string{
+        if(this.isNearlyWin(leftHp, totalHp)){
+            return `只差 ${leftHp} 血，下一把能过`;
+        }
+
+        if(monsterAttack >= 20){
+            return "没扛住这次反击，求助后再冲一把";
+        }
+
+        let stageScore:number = GameMain.instance.getChallengeStageScore();
+        if(stageScore <= 3){
+            return "这关开始变紧了，优先凑稳定牌型";
+        }
+
+        return "这把牌型断了，下把先凑成型再出手";
+    }
+
+    /**
+     * 判断是否属于“差一点就赢”的失败。
+     * 同时看固定血量和剩余比例，避免高血怪只剩少量血时提示不够准确。
+     */
+    private isNearlyWin(leftHp:number, totalHp:number):boolean{
+        if(leftHp <= 12)return true;
+        if(totalHp > 0 && leftHp <= totalHp * 0.15)return true;
+        return false;
     }
 
     private onShareHelp(){

@@ -3,8 +3,8 @@ const RankEngine = require('./engine');
 
 const env = GameGlobal.wx || GameGlobal.tt || GameGlobal.swan;
 
-// 当前主域上报使用今日最好关卡做好友榜。
-const DEFAULT_RANK_KEY = 'rk_today_stage';
+// rkstage 是微信小游戏后台申请的排行榜唯一 ID，主域会上报今日最好关卡到这个 key。
+const DEFAULT_RANK_KEY = 'rkstage';
 
 function showRankList(key, page) {
     const rankKey = key || DEFAULT_RANK_KEY;

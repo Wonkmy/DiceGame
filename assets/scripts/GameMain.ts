@@ -180,7 +180,8 @@ export default class GameMain extends cc.Component {
         let regionName:string = DiceGameSave.getRegionName();
         wx.setUserCloudStorage({
             KVDataList: [
-                { key: "rk_today_stage", value: `${stage}` },
+                // rkstage 是微信小游戏后台申请的排行榜唯一 ID，用今日最好关卡作为榜单成绩。
+                { key: "rkstage", value: `${stage}` },
                 { key: "rk_region", value: regionName },
                 { key: "rk_region_stage", value: `${regionName}_${stage}` }
             ],

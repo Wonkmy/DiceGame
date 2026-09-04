@@ -106,6 +106,7 @@ export default class MainPanel extends BaseUI {
     private attackBtnOriginScale:number = null!;
     private attackBtnOriginColor:cc.Color = null!;
     private attackBtnKillReadyPlaying:boolean = false;
+    private attackBtnLocked:boolean = false;
 
     onLoad(): void {
         MainPanel.instance = this;
@@ -249,6 +250,8 @@ export default class MainPanel extends BaseUI {
     }
 
     private onStartBattle() {
+        if(this.attackBtnLocked)return;
+
         if(this.selectedDice.length<=0){
             UIManager.getInstance().openUI(TipPanel, 0, (ui: TipPanel) => {
                 ui.onShow();
@@ -263,7 +266,7 @@ export default class MainPanel extends BaseUI {
         if (this.battlleIn) return;
         this.battlleIn = true;
         this.resetDiceHandFeedback();
-        this.refreshAttackBtnState(true);
+        this.setAttackBtnLocked(true);
         this.refreshBattleWarningEffects();
         if(this.testip){
             this.getGuideTipRoot().active = false;
@@ -463,6 +466,7 @@ export default class MainPanel extends BaseUI {
 
     private refreshAttackBtnState(canAttack:boolean){
         if(!this.btn_start || !cc.isValid(this.btn_start))return;
+        if(this.attackBtnLocked)return;
 
         if(this.attackBtnOriginScale === null){
             this.attackBtnOriginScale = this.btn_start.scale;
@@ -479,6 +483,33 @@ export default class MainPanel extends BaseUI {
             // 无有效牌型时只做视觉置灰，不禁止点击，保留原来的提示逻辑。
             this.btn_start.opacity = 145;
             this.btn_start.color = cc.color(150, 150, 150, 255);
+        }
+    }
+
+    /**
+     * 设置攻击按钮结算锁定态。
+     * 只在有效攻击已经开始后禁用触摸，避免玩家在剑动画和结算期间重复点击。
+     */
+    private setAttackBtnLocked(locked:boolean){
+        if(!this.btn_start || !cc.isValid(this.btn_start))return;
+        if(this.attackBtnLocked === locked)return;
+
+        this.attackBtnLocked = locked;
+        let btnComp:cc.Button = this.btn_start.getComponent(cc.Button);
+
+        if(locked){
+            this.resetAttackBtnFeedback();
+            this.btn_start.opacity = 120;
+            this.btn_start.color = cc.color(120, 120, 120, 255);
+            this.btn_start.pauseSystemEvents(true);
+            if(btnComp){
+                btnComp.interactable = false;
+            }
+        }else{
+            this.btn_start.resumeSystemEvents(true);
+            if(btnComp){
+                btnComp.interactable = true;
+            }
         }
     }
 
@@ -561,6 +592,7 @@ export default class MainPanel extends BaseUI {
         this.selectedDice=[];
         this.curDiceHandResult = null!;
         this.calculateData = null!;
+        this.setAttackBtnLocked(false);
         this.refreshAttackBtnState(false);
         this.refreshAllUIText(0, 0, 0, null, true);
         this.refreshBattleWarningEffects();
@@ -1132,6 +1164,7 @@ export default class MainPanel extends BaseUI {
 
     override onDestroy(): void {
         // this.btn_onRoll.off(cc.Node.EventType.TOUCH_END,this.onReRoll,this)
+        this.setAttackBtnLocked(false);
         this.refreshAttackBtnState(true);
         if(this.killReadyEffectNode && cc.isValid(this.killReadyEffectNode)){
             cc.Tween.stopAllByTarget(this.killReadyEffectNode);
