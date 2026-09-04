@@ -62,6 +62,9 @@ export default class MainPanel extends BaseUI {
     @property({type:cc.Node, displayName:"斩杀提示特效", tooltip:"当前攻击力足够击杀怪物时显示，建议放在攻击按钮或剑附近"})
     killReadyEffectNode:cc.Node = null!;
 
+    @property({type:cc.Node, displayName:"可斩杀艺术字", tooltip:"当前攻击力足够击杀怪物时显示，建议放在 MainPanel 中间偏上位置"})
+    killReadyWordNode:cc.Node = null!;
+
     @property({type:cc.Node, displayName:"低血量警告特效", tooltip:"玩家血量较低时显示，建议放在血量图标附近"})
     lowHpWarningNode:cc.Node = null!;
 
@@ -98,7 +101,11 @@ export default class MainPanel extends BaseUI {
     private homeBtn:cc.Node = null!;
     private firstGuideTextOriginPos:cc.Vec2 = null!;
     private killReadyEffectOriginScale:number = null!;
+    private killReadyWordOriginScale:number = null!;
     private lowHpWarningOriginScale:number = null!;
+    private attackBtnOriginScale:number = null!;
+    private attackBtnOriginColor:cc.Color = null!;
+    private attackBtnKillReadyPlaying:boolean = false;
 
     onLoad(): void {
         MainPanel.instance = this;
@@ -125,6 +132,7 @@ export default class MainPanel extends BaseUI {
         }
 
         this.node.getChildByName("GamingContainer").opacity = 0;
+        this.refreshAttackBtnState(false);
         if(this.testip){
             let guideRoot:cc.Node = this.getGuideTipRoot();
             this.firstGuideTextOriginPos = new cc.Vec2(guideRoot.x, guideRoot.y);
@@ -254,6 +262,9 @@ export default class MainPanel extends BaseUI {
         }
         if (this.battlleIn) return;
         this.battlleIn = true;
+        this.resetDiceHandFeedback();
+        this.refreshAttackBtnState(true);
+        this.refreshBattleWarningEffects();
         if(this.testip){
             this.getGuideTipRoot().active = false;
         }
@@ -344,13 +355,166 @@ export default class MainPanel extends BaseUI {
 
     switchHandType(type:string){
         let _path = "arts/handwords/" + (type.toLowerCase());
-        cc.tween(this.node.getChildByName("GamingContainer").getChildByName("handwords"))
-            .to(0.2,{scale:1.15})
-            .to(0.2,{scale:0.8})
+        let handWordNode:cc.Node = this.node.getChildByName("GamingContainer").getChildByName("handwords");
+        cc.Tween.stopAllByTarget(handWordNode);
+        // 牌型成立时，艺术字原地弹一下，最后回到正常大小。
+        handWordNode.scale = 1;
+        cc.tween(handWordNode)
+            .to(0.12,{scale:1.28},{easing:"backOut"})
+            .to(0.08,{scale:0.94})
+            .to(0.08,{scale:1})
             .start()
         GameMain.instance.bundle.load(_path, cc.SpriteFrame,(err,sp:cc.SpriteFrame)=>{
-            this.node.getChildByName("GamingContainer").getChildByName("handwords").getComponent(cc.Sprite).spriteFrame = sp;
+            handWordNode.getComponent(cc.Sprite).spriteFrame = sp;
         })
+    }
+
+    playHandFormFeedback(){
+        this.resetDiceHandFeedback();
+
+        if(!this.curDiceHandResult || this.curDiceHandResult.type <= DiceHandType.None){
+            this.refreshAttackBtnState(false);
+            this.refreshBattleWarningEffects();
+            return;
+        }
+
+        this.refreshAttackBtnState(true);
+        this.playUsedDiceFeedback();
+        this.playAttackBtnReadyFeedback();
+        this.refreshBattleWarningEffects();
+    }
+
+    private resetDiceHandFeedback(){
+        for (let i = 0; i < this.allDicesNodes.length; i++) {
+            let diceNode:cc.Node = this.allDicesNodes[i];
+            if(!diceNode || !cc.isValid(diceNode))continue;
+
+            cc.Tween.stopAllByTarget(diceNode);
+            diceNode.scale = 1;
+
+            let viewNode:cc.Node = diceNode.getChildByName("view");
+            if(viewNode && cc.isValid(viewNode)){
+                cc.Tween.stopAllByTarget(viewNode);
+                viewNode.scale = 1;
+                viewNode.color = cc.Color.WHITE;
+            }
+        }
+    }
+
+    private playUsedDiceFeedback(){
+        let usedPoints:number[] = this.curDiceHandResult.usedDicePoint.slice();
+
+        for (let i = 0; i < this.selectedDice.length; i++) {
+            let diceNode:cc.Node = this.selectedDice[i];
+            if(!diceNode || !cc.isValid(diceNode))continue;
+
+            let dice:Dice = diceNode.getComponent(Dice);
+            let usedIndex:number = usedPoints.indexOf(dice.finalIndex);
+            if(usedIndex < 0)continue;
+
+            usedPoints.splice(usedIndex, 1);
+            // 只强化真正参与牌型的骰子，未参与的已选骰子不抢反馈。
+            cc.tween(diceNode)
+                .to(0.1, { scale: 1.18 }, { easing: "backOut" })
+                .to(0.08, { scale: 1 })
+                .start();
+
+            let viewNode:cc.Node = diceNode.getChildByName("view");
+            if(viewNode && cc.isValid(viewNode)){
+                cc.tween(viewNode)
+                    .to(0.08, { scale: 1.08 })
+                    .call(() => {
+                        viewNode.color = cc.color(255, 230, 120, 255);
+                    })
+                    .delay(0.12)
+                    .call(() => {
+                        viewNode.color = cc.Color.WHITE;
+                    })
+                    .to(0.08, { scale: 1 })
+                    .start();
+            }
+        }
+    }
+
+    private playAttackBtnReadyFeedback(){
+        if(!this.btn_start || !cc.isValid(this.btn_start))return;
+
+        if(this.attackBtnOriginScale === null){
+            this.attackBtnOriginScale = this.btn_start.scale;
+        }
+
+        cc.Tween.stopAllByTarget(this.btn_start);
+        this.btn_start.scale = this.attackBtnOriginScale;
+        cc.tween(this.btn_start)
+            .to(0.1, { scale: this.attackBtnOriginScale * 1.12 }, { easing: "backOut" })
+            .to(0.08, { scale: this.attackBtnOriginScale })
+            .start();
+    }
+
+    private resetAttackBtnFeedback(){
+        if(!this.btn_start || !cc.isValid(this.btn_start))return;
+
+        cc.Tween.stopAllByTarget(this.btn_start);
+        this.attackBtnKillReadyPlaying = false;
+        if(this.attackBtnOriginScale !== null){
+            this.btn_start.scale = this.attackBtnOriginScale;
+        }
+    }
+
+    private refreshAttackBtnState(canAttack:boolean){
+        if(!this.btn_start || !cc.isValid(this.btn_start))return;
+
+        if(this.attackBtnOriginScale === null){
+            this.attackBtnOriginScale = this.btn_start.scale;
+        }
+        if(this.attackBtnOriginColor === null){
+            this.attackBtnOriginColor = this.btn_start.color;
+        }
+
+        this.resetAttackBtnFeedback();
+        if(canAttack){
+            this.btn_start.opacity = 255;
+            this.btn_start.color = this.attackBtnOriginColor;
+        }else{
+            // 无有效牌型时只做视觉置灰，不禁止点击，保留原来的提示逻辑。
+            this.btn_start.opacity = 145;
+            this.btn_start.color = cc.color(150, 150, 150, 255);
+        }
+    }
+
+    /**
+     * 控制可斩杀状态下的攻击按钮循环弹动。
+     * 只改按钮缩放，不影响按钮点击、伤害计算和原有攻击流程。
+     */
+    private setAttackBtnKillReadyAnim(show:boolean){
+        if(!this.btn_start || !cc.isValid(this.btn_start))return;
+
+        if(this.attackBtnOriginScale === null){
+            this.attackBtnOriginScale = this.btn_start.scale;
+        }
+
+        if(show){
+            if(this.attackBtnKillReadyPlaying)return;
+
+            this.attackBtnKillReadyPlaying = true;
+            cc.Tween.stopAllByTarget(this.btn_start);
+            this.btn_start.scale = this.attackBtnOriginScale;
+            cc.tween(this.btn_start)
+                .repeatForever(
+                    cc.tween()
+                        .to(0.12, { scale: this.attackBtnOriginScale * 1.16 }, { easing: "backOut" })
+                        .to(0.08, { scale: this.attackBtnOriginScale * 0.98 })
+                        .to(0.08, { scale: this.attackBtnOriginScale })
+                        .delay(0.45)
+                )
+                .start();
+        }else{
+            if(!this.attackBtnKillReadyPlaying)return;
+
+            this.attackBtnKillReadyPlaying = false;
+            cc.Tween.stopAllByTarget(this.btn_start);
+            this.btn_start.scale = this.attackBtnOriginScale;
+        }
     }
     private cameraShake(h:number){
         let _cam = cc.find("Canvas/MainCamera").getComponent(cc.Camera);
@@ -368,6 +532,14 @@ export default class MainPanel extends BaseUI {
         console.log("最终真实准备造成的伤害" + finalAttack);
         DiceGameSave.recordDamage(finalAttack);
         GameMain.instance.reportBestDamage(DiceGameSave.getBestDamage());
+        this.applyAttackDamageAndCleanup(allPoint, finalAttack);
+    }
+
+    /**
+     * 真正执行扣血、震屏、移除骰子和重置战斗状态。
+     * 斩杀预告会延迟调用这里，普通攻击会立即调用这里。
+     */
+    private applyAttackDamageAndCleanup(allPoint: number[], finalAttack:number){
         this.monster.beHurt(finalAttack);
 
         let finalScale = Math.min((1.0 + (finalAttack * 0.03 / 10)),1.2)
@@ -387,13 +559,40 @@ export default class MainPanel extends BaseUI {
         // 重置选中的骰子点数
         this.selectedDicePoint = [];
         this.selectedDice=[];
+        this.curDiceHandResult = null!;
         this.calculateData = null!;
+        this.refreshAttackBtnState(false);
         this.refreshAllUIText(0, 0, 0, null, true);
+        this.refreshBattleWarningEffects();
         this.refreshAllCharmItems();// 移除底部所有已使用的charm
         this.unusePointCount = 5 - this.allDicesNodes.length;
         this.battlleIn = false;
         this.onRollling = false;
         this.node.getChildByName("GamingContainer").getChildByName("handwords").getComponent(cc.Sprite).spriteFrame = null!;
+    }
+
+    /**
+     * 播放一次攻击按钮附近的斩杀特效。
+     * 只作为点击攻击后的瞬间反馈，不再提前常驻显示，避免半成品伤害导致误判。
+     */
+    private playKillReadyEffectOnce(){
+        if(!this.killReadyEffectNode || !cc.isValid(this.killReadyEffectNode))return;
+
+        cc.Tween.stopAllByTarget(this.killReadyEffectNode);
+        let originScale:number = this.killReadyEffectOriginScale !== null ? this.killReadyEffectOriginScale : this.killReadyEffectNode.scale;
+        this.killReadyEffectOriginScale = originScale;
+        this.killReadyEffectNode.active = true;
+        this.killReadyEffectNode.opacity = 255;
+        this.killReadyEffectNode.scale = originScale * 0.75;
+        cc.tween(this.killReadyEffectNode)
+            .to(0.12, { scale: originScale * 1.35, opacity: 255 }, { easing: "backOut" })
+            .to(0.12, { scale: originScale, opacity: 120 })
+            .to(0.08, { opacity: 0 })
+            .call(() => {
+                if(!this.killReadyEffectNode || !cc.isValid(this.killReadyEffectNode))return;
+                this.killReadyEffectNode.active = false;
+            })
+            .start();
     }
 
     private loadGame() {
@@ -672,6 +871,7 @@ export default class MainPanel extends BaseUI {
         GameMain.instance.reportBestStage(DiceGameSave.getBestStage());
         GameMain.instance.reportChallengeRank(DiceGameSave.getTodayBestStage());
         GameMain.gameResultType = this.currentNodeData && this.currentNodeData.type === "boss" ? "chapterWin" : "stageWin";
+        GameMain.instance.addWinStreak();
         if(this.firstGuideActive){
             // 首局第一个怪击杀后结束引导，之后不再反复打扰玩家。
             this.firstGuideActive = false;
@@ -774,20 +974,106 @@ export default class MainPanel extends BaseUI {
 
     private hideBattleWarningEffects(){
         this.setLoopEffectVisible(this.killReadyEffectNode, false, "kill");
+        this.setKillReadyWordVisible(false);
+        this.setAttackBtnKillReadyAnim(false);
         this.setLoopEffectVisible(this.lowHpWarningNode, false, "lowHp");
     }
 
     private refreshKillReadyEffect(){
-        if(!this.killReadyEffectNode)return;
-
         let show:boolean = false;
-        if(!GameMain.gameFinished && this.monster && this.calculateData){
-            let curAttack:number = this.calculateData.totalPoints * this.calculateData.totalMultiple;
-            // 怪物有护盾时，必须把护盾也算进去，避免提示“能杀”但实际杀不掉。
-            show = curAttack >= this.monster.getCurHp() + this.monster.getCurShield();
+        if(!this.battlleIn && !GameMain.gameFinished && this.monster && this.selectedDice.length > 0 && this.curDiceHandResult && this.curDiceHandResult.type > DiceHandType.None){
+            let previewAttack:number = this.getPreviewFinalAttack();
+            show = previewAttack > 0 && this.monster.canBeKilledByAttack(previewAttack);
         }
 
-        this.setLoopEffectVisible(this.killReadyEffectNode, show, "kill");
+        // 旧的 killReadyEffectNode 反馈已经被“可斩杀艺术字 + 怪物闪烁 + 攻击按钮弹动”替代，这里保持隐藏。
+        this.setLoopEffectVisible(this.killReadyEffectNode, false, "kill");
+        this.setKillReadyWordVisible(show);
+        this.setAttackBtnKillReadyAnim(show);
+        if(this.monster){
+            this.monster.refreshKillReadyFeedback(show);
+        }
+    }
+
+    /**
+     * 控制可斩杀艺术字显示。
+     * 只负责艺术字节点自己的显隐和弹动，不参与伤害计算，降低和战斗逻辑的耦合。
+     */
+    private setKillReadyWordVisible(show:boolean){
+        if(!this.killReadyWordNode || !cc.isValid(this.killReadyWordNode))return;
+
+        if(show){
+            if(this.killReadyWordNode.active)return;
+
+            if(this.killReadyWordOriginScale === null){
+                this.killReadyWordOriginScale = this.killReadyWordNode.scale;
+            }
+            this.killReadyWordNode.active = true;
+            this.playKillReadyWordLoopAnim();
+        }else{
+            cc.Tween.stopAllByTarget(this.killReadyWordNode);
+            this.killReadyWordNode.active = false;
+            if(this.killReadyWordOriginScale !== null){
+                this.killReadyWordNode.scale = this.killReadyWordOriginScale;
+            }
+            this.killReadyWordNode.opacity = 255;
+        }
+    }
+
+    /**
+     * 播放可斩杀艺术字循环弹动。
+     * 节点位置完全由预制体决定，代码只改缩放和透明度，避免运行时错位。
+     */
+    private playKillReadyWordLoopAnim(){
+        if(!this.killReadyWordNode || !cc.isValid(this.killReadyWordNode))return;
+
+        let originScale:number = this.killReadyWordOriginScale !== null ? this.killReadyWordOriginScale : this.killReadyWordNode.scale;
+        cc.Tween.stopAllByTarget(this.killReadyWordNode);
+        this.killReadyWordNode.opacity = 255;
+        this.killReadyWordNode.scale = originScale;
+        cc.tween(this.killReadyWordNode)
+            .repeatForever(
+                cc.tween()
+                    .to(0.12, { scale: originScale * 1.22 }, { easing: "backOut" })
+                    .to(0.08, { scale: originScale * 0.94 })
+                    .to(0.08, { scale: originScale })
+                    .delay(0.55)
+            )
+            .start();
+    }
+
+    /**
+     * 预估当前选中骰子真正点击攻击后会造成的最终伤害。
+     * 这里只读当前数据，不清空加成、不回血、不生成飘字，避免影响正式攻击结算。
+     */
+    private getPreviewFinalAttack(){
+        if(!this.curDiceHandResult || this.curDiceHandResult.type <= DiceHandType.None)return 0;
+
+        let data:CalculateData = GetCalculateMultiple(this.curDiceHandResult.type);
+        let previewPoints:number = data.totalPoints + GameMain.extraPoint;
+        let previewMultiple:number = data.totalMultiple + GameMain.extraMultiple;
+        let previewExtraAttack:number = 0;
+        let usedPoints:number[] = this.curDiceHandResult.usedDicePoint.slice();
+
+        for (let i = 0; i < this.selectedDice.length; i++) {
+            let diceNode:cc.Node = this.selectedDice[i];
+            if(!diceNode || !cc.isValid(diceNode))continue;
+
+            let dice:Dice = diceNode.getComponent(Dice);
+            let usedIndex:number = usedPoints.indexOf(dice.finalIndex);
+            if(usedIndex < 0)continue;
+
+            usedPoints.splice(usedIndex, 1);
+            previewPoints += dice.finalIndex;
+            if(dice.diceType === DiceType.fire){
+                previewExtraAttack += 3;
+            }
+            if(dice.diceType === DiceType.mult){
+                previewMultiple += 1;
+            }
+        }
+
+        return previewPoints * previewMultiple + previewExtraAttack;
     }
 
     private refreshLowHpWarningEffect(){
@@ -846,8 +1132,12 @@ export default class MainPanel extends BaseUI {
 
     override onDestroy(): void {
         // this.btn_onRoll.off(cc.Node.EventType.TOUCH_END,this.onReRoll,this)
+        this.refreshAttackBtnState(true);
         if(this.killReadyEffectNode && cc.isValid(this.killReadyEffectNode)){
             cc.Tween.stopAllByTarget(this.killReadyEffectNode);
+        }
+        if(this.killReadyWordNode && cc.isValid(this.killReadyWordNode)){
+            cc.Tween.stopAllByTarget(this.killReadyWordNode);
         }
         if(this.lowHpWarningNode && cc.isValid(this.lowHpWarningNode)){
             cc.Tween.stopAllByTarget(this.lowHpWarningNode);

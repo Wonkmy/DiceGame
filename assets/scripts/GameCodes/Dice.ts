@@ -19,7 +19,7 @@ export default class Dice extends cc.Component {
     startDice:boolean = true;
 
     time:number = 0;
-    totalTimer:number = 2;
+    totalTimer:number = 0.85;
     cTime:number = 0;
     curIndex:number = 0;
 
@@ -87,6 +87,7 @@ export default class Dice extends cc.Component {
             MainPanel.instance.NumPointsText.string = "0";
             MainPanel.instance.NumMultipleText.string = "0";
         }
+        MainPanel.instance.playHandFormFeedback();
     }
     async setDeSelected() {
     return new Promise<void>((resolve, reject) => {

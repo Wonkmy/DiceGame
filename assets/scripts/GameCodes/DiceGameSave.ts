@@ -17,6 +17,7 @@ export default class DiceGameSave {
     private static readonly DAILY_SHARE_CHALLENGE_USED_KEY = "dice_daily_share_challenge_used";
     private static readonly FIRST_GUIDE_DONE_KEY = "dice_first_guide_done";
     private static readonly FIRST_FAIL_HELP_GUIDE_KEY = "dice_first_fail_help_guide";
+    private static readonly FIRST_WIN_SHOW_KEY = "dice_first_win_show";
 
     static resetCurrentGame() {
         this.currentMaxDamage = 0;
@@ -137,6 +138,14 @@ export default class DiceGameSave {
         cc.sys.localStorage.setItem(this.FIRST_FAIL_HELP_GUIDE_KEY, "1");
     }
 
+    static hasShowFirstWin():boolean{
+        return cc.sys.localStorage.getItem(this.FIRST_WIN_SHOW_KEY) === "1";
+    }
+
+    static markFirstWinShow(){
+        cc.sys.localStorage.setItem(this.FIRST_WIN_SHOW_KEY, "1");
+    }
+
     static getRemainDailyChallengeCount():number{
         this.checkDailyData();
         let usedCount:number = Number(cc.sys.localStorage.getItem(this.DAILY_USED_KEY)) || 0;
@@ -189,6 +198,7 @@ export default class DiceGameSave {
         cc.sys.localStorage.removeItem(this.DAILY_SHARE_CHALLENGE_USED_KEY);
         cc.sys.localStorage.removeItem(this.FIRST_GUIDE_DONE_KEY);
         cc.sys.localStorage.removeItem(this.FIRST_FAIL_HELP_GUIDE_KEY);
+        cc.sys.localStorage.removeItem(this.FIRST_WIN_SHOW_KEY);
         this.resetCurrentGame();
     }
 

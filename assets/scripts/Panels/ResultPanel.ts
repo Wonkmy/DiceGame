@@ -8,6 +8,7 @@ import { CharmData, randomInt } from "../Global/DiceHandUtil";
 import DiceGameSave from "../GameCodes/DiceGameSave";
 import ShareManager from "../GameCodes/ShareManager";
 import HomePanel from "./HomePanel";
+import TipPanel from "./TipPanel";
 const {ccclass, property} = cc._decorator;
 
 @ccclass
@@ -25,6 +26,9 @@ export default class ResultPanel extends BaseUI{
 
     @property({type:cc.Node, displayName:"回主界面按钮", tooltip:"失败或全部通关后返回主界面"})
     btn_home:cc.Node = null!;
+
+    @property({type:cc.Node, displayName:"查看详情按钮", tooltip:"点击后查看排名、次数、地区等详细结算信息"})
+    btn_detail:cc.Node = null!;
 
     @property({type:cc.Node, displayName:"首胜艺术字节点", tooltip:"第1关胜利时显示的首胜艺术字图片节点"})
     firstWinArtNode:cc.Node = null!;
@@ -44,6 +48,9 @@ export default class ResultPanel extends BaseUI{
     @property({type:cc.Label, displayName:"失败复盘文本", tooltip:"失败复盘底框里的短提示文本"})
     failReviewLabel:cc.Label = null!;
 
+    @property({type:cc.Label, displayName:"连胜文本", tooltip:"显示本次挑战内连续通关次数，例如：连胜 x3"})
+    winStreakLabel:cc.Label = null!;
+
     @property({type:cc.Float, displayName:"求助按钮提示间隔", tooltip:"失败页求助再战按钮每隔多少秒播放一次提示动画"})
     shareHelpGuideInterval:number = 2.5;
 
@@ -55,8 +62,11 @@ export default class ResultPanel extends BaseUI{
     private shareHelpBtnOriginScale:number = null!;
     private homeBtnOriginScale:number = null!;
     private failReviewOriginScale:number = null!;
+    private winStreakLabelOriginScale:number = null!;
     private resultTextOriginY:number = null!;
     private shareHelpGuideCallback:Function = null!;
+    private nextBtnGuideCallback:Function = null!;
+    private resultDetailText:string = "";
 
     onLoad(): void {
         this.hideAllResultArt();
@@ -72,6 +82,10 @@ export default class ResultPanel extends BaseUI{
         if(this.btn_home){
             this.btn_home.off(cc.Node.EventType.TOUCH_END,this.onBackHome,this);
             this.btn_home.on(cc.Node.EventType.TOUCH_END,this.onBackHome,this);
+        }
+        if(this.btn_detail){
+            this.btn_detail.off(cc.Node.EventType.TOUCH_END,this.onShowDetail,this);
+            this.btn_detail.on(cc.Node.EventType.TOUCH_END,this.onShowDetail,this);
         }
         this.refreshResultShow();
 
@@ -95,18 +109,21 @@ export default class ResultPanel extends BaseUI{
         let chapterName:string = GameMain.curChapterIndex <= 0 ? "新手章节" : "深渊章节";
         let todayBestStage:number = DiceGameSave.getTodayBestStage();
         let overtakePercent:number = DiceGameSave.getRegionOvertakePercent();
+        this.resultDetailText = this.getResultDetailText(stageScore, chapterName, todayBestStage, overtakePercent);
 
         this.hideAllResultArt();
         this.stopNextBtnAnim();
+        this.showWinStreak(false);
+        this.showDetailBtn(true);
 
         if(GameMain.gameResultType === "fail"){
             this.showFailArt(true);
             this.showFirstFailHelpGuide = !DiceGameSave.hasShowFirstFailHelpGuide() && DiceGameSave.getRemainDailyShareHelpCount() > 0;
             if(this.showFirstFailHelpGuide){
                 DiceGameSave.markFirstFailHelpGuideShow();
-                resultText = `首次挑战失败\n求助好友可立即再战\n本章从第1关再冲\n今日最好 ${todayBestStage}关`;
+                resultText = `第${stageScore}关失败\n求助好友可再战`;
             }else{
-                resultText = `差一点就过第${stageScore}关\n${chapterName}从第1关再冲\n今日最好 ${todayBestStage}关\n超过本地区 ${overtakePercent}% 玩家`;
+                resultText = `第${stageScore}关失败\n差一点就过了`;
             }
             btnLabel.string = "再冲一次";
             this.showHomeBtn(true);
@@ -114,10 +131,10 @@ export default class ResultPanel extends BaseUI{
             this.showFailReview(true, this.getFailReviewText());
         }else if(GameMain.gameResultType === "chapterWin"){
             if(GameMain.curChapterIndex >= 1){
-                resultText = "全部通关";
+                resultText = "全部通关\n今日封顶";
                 btnLabel.string = "再来一局";
             }else{
-                resultText = "即将进入深渊章节";
+                resultText = "章节通关\n进入深渊";
                 btnLabel.string = "进入深渊章节";
                 this.showChapterWinArt(true);
                 this.playNextBtnAnim();
@@ -125,29 +142,29 @@ export default class ResultPanel extends BaseUI{
             this.showHomeBtn(GameMain.curChapterIndex >= 1);
             this.showShareHelpBtn(false);
             this.showFailReview(false);
+            this.showWinStreak(GameMain.curWinStreak >= 2);
         }else{
-            // 第1关胜利给新手更强的正反馈；普通胜利用艺术字表达，不再重复显示“胜利”文本。
-            if(stageScore === 1){
-                resultText = "你已掌握对子攻击";
+            // 首胜艺术字只显示一次；后续再打第1关胜利，走普通胜利反馈。
+            if(stageScore === 1 && !DiceGameSave.hasShowFirstWin()){
+                DiceGameSave.markFirstWinShow();
+                resultText = "首关突破\n已掌握对子攻击";
                 this.showFirstWinArt(true);
             }else{
-                resultText = "";
+                resultText = `第${stageScore}关通过`;
                 this.showWinArt(true);
             }
             btnLabel.string = "下一关";
             this.showHomeBtn(false);
             this.showShareHelpBtn(false);
             this.showFailReview(false);
+            this.showWinStreak(GameMain.curWinStreak >= 2);
         }
 
         titleLabel.fontSize = 34;
         titleLabel.lineHeight = 46;
-        if(GameMain.gameResultType === "fail"){
-            titleLabel.string = `${resultText}\n剩余挑战 ${DiceGameSave.getRemainDailyChallengeCount()}/${DiceGameSave.MAX_DAILY_CHALLENGE_COUNT}\n分享复活 ${DiceGameSave.getRemainDailyShareHelpCount()}/${DiceGameSave.MAX_DAILY_SHARE_HELP_COUNT}`;
-        }else{
-            let resultPrefix:string = resultText.length > 0 ? resultText + "\n" : "";
-            titleLabel.string = `${resultPrefix}今日最好 ${todayBestStage}关\n超过本地区 ${overtakePercent}% 玩家\n剩余挑战 ${DiceGameSave.getRemainDailyChallengeCount()}/${DiceGameSave.MAX_DAILY_CHALLENGE_COUNT}\n分享复活 ${DiceGameSave.getRemainDailyShareHelpCount()}/${DiceGameSave.MAX_DAILY_SHARE_HELP_COUNT}\n地区 ${DiceGameSave.getRegionName()}`;
-        }
+        // 旧版这里会把排名、地区、剩余次数全部塞进主结算文案；
+        // 现在主区域只显示本局战报，其它信息统一放到“查看详情”。
+        titleLabel.string = resultText;
         titleLabel.node.off(cc.Node.EventType.TOUCH_END, ShareManager.shareBestDamage, ShareManager);
         titleLabel.node.on(cc.Node.EventType.TOUCH_END, ShareManager.shareBestDamage, ShareManager);
         this.playResultFeedbackAnim(titleLabel.node);
@@ -196,14 +213,14 @@ export default class ResultPanel extends BaseUI{
             this.shareHelpBtnOriginScale = this.btn_shareHelp.scale;
         }
 
-        // 轻微强调求助按钮，提示玩家可以继续挑战。
+        // 强调求助按钮，失败后优先引导玩家继续挑战。
         cc.Tween.stopAllByTarget(this.btn_shareHelp);
         this.btn_shareHelp.scale = this.shareHelpBtnOriginScale;
         cc.tween(this.btn_shareHelp)
-            .repeat(2,
+            .repeat(3,
                 cc.tween()
-                    .to(0.16, { scale: this.shareHelpBtnOriginScale * 1.08 })
-                    .to(0.16, { scale: this.shareHelpBtnOriginScale })
+                    .to(0.13, { scale: this.shareHelpBtnOriginScale * 1.13 }, { easing: "backOut" })
+                    .to(0.1, { scale: this.shareHelpBtnOriginScale })
             )
             .start();
     }
@@ -215,6 +232,38 @@ export default class ResultPanel extends BaseUI{
         if(labels.length > 0){
             labels[0].string = text;
         }
+    }
+
+    /**
+     * 控制查看详情按钮显示。
+     * 主结算只保留短战报，排名、次数、地区等次级信息放到详情里。
+     */
+    private showDetailBtn(show:boolean){
+        if(!this.btn_detail)return;
+
+        this.btn_detail.active = show;
+        this.setButtonLabel(this.btn_detail, "查看详情");
+    }
+
+    /**
+     * 打开本次结算详情。
+     * 第一版复用 TipPanel，不额外做复杂弹窗预制体。
+     */
+    private onShowDetail(){
+        if(!this.resultDetailText || this.resultDetailText.length <= 0)return;
+
+        UIManager.getInstance().openUI(TipPanel, 0, (ui:TipPanel) => {
+            ui.onShow();
+            ui.showTip(this.resultDetailText, null, false, 3.5);
+        })
+    }
+
+    /**
+     * 生成结算详情文案。
+     * 这些信息不放在主结算上，避免玩家第一眼看到过多文字。
+     */
+    private getResultDetailText(stageScore:number, chapterName:string, todayBestStage:number, overtakePercent:number){
+        return `本次关卡：第${stageScore}关\n当前章节：${chapterName}\n今日最好：${todayBestStage}关\n超过本地区：${overtakePercent}%玩家\n剩余挑战：${DiceGameSave.getRemainDailyChallengeCount()}/${DiceGameSave.MAX_DAILY_CHALLENGE_COUNT}\n分享复活：${DiceGameSave.getRemainDailyShareHelpCount()}/${DiceGameSave.MAX_DAILY_SHARE_HELP_COUNT}\n地区：${DiceGameSave.getRegionName()}`;
     }
 
     private showHomeBtn(show:boolean){
@@ -271,12 +320,13 @@ export default class ResultPanel extends BaseUI{
         this.winArtNode.active = show;
 
         if(show){
+            let power:number = this.getWinStreakAnimPower();
             // 普通胜利给明确正反馈，但强度弱于首胜和章节通关。
             this.winArtNode.opacity = 0;
             this.winArtNode.scale = 0.5;
             this.winArtNode.angle = 0;
             cc.tween(this.winArtNode)
-                .to(0.16, { opacity: 255, scale: 1.08 }, { easing: "backOut" })
+                .to(0.16, { opacity: 255, scale: 1.08 + power * 0.03 }, { easing: "backOut" })
                 .to(0.08, { scale: 1 })
                 .start();
         }else{
@@ -325,9 +375,10 @@ export default class ResultPanel extends BaseUI{
         this.chapterWinArtNode.active = show;
 
         if(show){
+            let power:number = this.getWinStreakAnimPower();
             // 章节通关使用原地放大压下的强反馈，不移动节点位置。
             this.chapterWinArtNode.opacity = 0;
-            this.chapterWinArtNode.scale = 1.8;
+            this.chapterWinArtNode.scale = 1.8 + power * 0.06;
             this.chapterWinArtNode.angle = -8;
             this.chapterWinArtNode.y = this.chapterWinArtOriginY;
             cc.tween(this.chapterWinArtNode)
@@ -343,6 +394,58 @@ export default class ResultPanel extends BaseUI{
                 this.chapterWinArtNode.y = this.chapterWinArtOriginY;
             }
         }
+    }
+
+    /**
+     * 控制连胜文本显示。
+     * 只显示本次挑战内的连胜，不读写本地存储，失败或回主页后由 GameMain 清空。
+     */
+    private showWinStreak(show:boolean){
+        if(!this.winStreakLabel)return;
+
+        cc.Tween.stopAllByTarget(this.winStreakLabel.node);
+        this.winStreakLabel.node.active = show;
+
+        if(!show){
+            this.winStreakLabel.node.opacity = 255;
+            if(this.winStreakLabelOriginScale !== null){
+                this.winStreakLabel.node.scale = this.winStreakLabelOriginScale;
+            }
+            return;
+        }
+
+        if(this.winStreakLabelOriginScale === null){
+            this.winStreakLabelOriginScale = this.winStreakLabel.node.scale;
+        }
+
+        this.winStreakLabel.string = `连胜 x${GameMain.curWinStreak}`;
+        this.playWinStreakAnim();
+    }
+
+    /**
+     * 播放连胜文本弹入动画。
+     * 连胜越高，弹出的幅度稍微越强，但仍然复用同一套动画。
+     */
+    private playWinStreakAnim(){
+        if(!this.winStreakLabel || !cc.isValid(this.winStreakLabel.node))return;
+
+        let power:number = this.getWinStreakAnimPower();
+        let originScale:number = this.winStreakLabelOriginScale !== null ? this.winStreakLabelOriginScale : this.winStreakLabel.node.scale;
+        this.winStreakLabel.node.opacity = 0;
+        this.winStreakLabel.node.scale = originScale * 0.75;
+        cc.tween(this.winStreakLabel.node)
+            .delay(0.08)
+            .to(0.16, { opacity: 255, scale: originScale * (1.12 + power * 0.03) }, { easing: "backOut" })
+            .to(0.08, { scale: originScale })
+            .start();
+    }
+
+    /**
+     * 获取连胜动画强度。
+     * 最高按 5 连胜计算，避免后期数值过大导致动画太夸张。
+     */
+    private getWinStreakAnimPower(){
+        return Math.min(Math.max(GameMain.curWinStreak - 1, 0), 5);
     }
 
     private playNextBtnAnim(){
@@ -376,6 +479,9 @@ export default class ResultPanel extends BaseUI{
     }
 
     private stopNextBtnAnim(){
+        if(this.nextBtnGuideCallback){
+            this.unschedule(this.nextBtnGuideCallback);
+        }
         if(!this.btn_next || !cc.isValid(this.btn_next))return;
 
         cc.Tween.stopAllByTarget(this.btn_next);
@@ -383,6 +489,42 @@ export default class ResultPanel extends BaseUI{
         if(this.nextBtnOriginScale !== null){
             this.btn_next.scale = this.nextBtnOriginScale;
         }
+    }
+
+    /**
+     * 胜利时持续强化“下一关”按钮。
+     * 只做轻量循环弹动，提示玩家继续，不抢胜利艺术字的主反馈。
+     */
+    private startNextBtnGuideLoop(){
+        if(!this.btn_next || !cc.isValid(this.btn_next))return;
+
+        if(this.nextBtnOriginScale === null){
+            this.nextBtnOriginScale = this.btn_next.scale;
+        }
+
+        this.playNextBtnGuideOnce();
+        if(!this.nextBtnGuideCallback){
+            this.nextBtnGuideCallback = () => {
+                this.playNextBtnGuideOnce();
+            };
+        }
+        this.schedule(this.nextBtnGuideCallback, 1.6);
+    }
+
+    /**
+     * 播放一次“下一关”按钮提示动画。
+     * 拆成单次函数，方便循环调用，也方便后续复用到其它主按钮。
+     */
+    private playNextBtnGuideOnce(){
+        if(!this.btn_next || !cc.isValid(this.btn_next) || !this.btn_next.activeInHierarchy)return;
+
+        cc.Tween.stopAllByTarget(this.btn_next);
+        let originScale:number = this.nextBtnOriginScale !== null ? this.nextBtnOriginScale : this.btn_next.scale;
+        this.btn_next.scale = originScale;
+        cc.tween(this.btn_next)
+            .to(0.14, { scale: originScale * 1.1 }, { easing: "backOut" })
+            .to(0.1, { scale: originScale })
+            .start();
     }
 
     private stopResultFeedbackAnim(){
@@ -410,6 +552,14 @@ export default class ResultPanel extends BaseUI{
                 this.failReviewNode.scale = this.failReviewOriginScale;
             }
         }
+
+        if(this.winStreakLabel && cc.isValid(this.winStreakLabel.node)){
+            cc.Tween.stopAllByTarget(this.winStreakLabel.node);
+            this.winStreakLabel.node.opacity = 255;
+            if(this.winStreakLabelOriginScale !== null){
+                this.winStreakLabel.node.scale = this.winStreakLabelOriginScale;
+            }
+        }
     }
 
     private playResultFeedbackAnim(titleNode:cc.Node){
@@ -426,6 +576,9 @@ export default class ResultPanel extends BaseUI{
             this.playButtonEnterAnim(this.btn_home, 0.28, this.homeBtnOriginScale);
         }else{
             this.playButtonEnterAnim(this.btn_next, 0.15, this.nextBtnOriginScale);
+            this.scheduleOnce(() => {
+                this.startNextBtnGuideLoop();
+            }, 0.45);
         }
     }
 
@@ -685,6 +838,9 @@ export default class ResultPanel extends BaseUI{
         }
         if(this.btn_home && cc.isValid(this.btn_home)){
             this.btn_home.off(cc.Node.EventType.TOUCH_END, this.onBackHome, this);
+        }
+        if(this.btn_detail && cc.isValid(this.btn_detail)){
+            this.btn_detail.off(cc.Node.EventType.TOUCH_END, this.onShowDetail, this);
         }
     }
 }

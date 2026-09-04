@@ -31,6 +31,7 @@ export default class GameMain extends cc.Component {
     static gameFinished:boolean = false;
     static gameResultType:string = "stageWin";// stageWin:小关胜利 fail:失败 chapterWin:章节通关
     static isNewUserFirstPlay:boolean = false;// 本次启动是否为新用户自动进入的首局
+    static curWinStreak:number = 0;// 本次挑战内连续胜利次数，失败/重开/回主页后清空
 
 
     // 如果有道具或者三选一的功能是改变点数和倍率的，直接使用这两个
@@ -45,6 +46,7 @@ export default class GameMain extends cc.Component {
         GameMain.curChapterIndex = 0;
         GameMain.curStageIndex = 0;
         GameMain.gameFinished = false;
+        GameMain.curWinStreak = 0;
         ShareManager.initShareMenu();
         Advertise.init();
         if(CC_DEBUG){
@@ -97,6 +99,7 @@ export default class GameMain extends cc.Component {
         GameMain.curStageIndex = 0;
         GameMain.gameFinished = false;
         GameMain.gameResultType = "stageWin";
+        GameMain.curWinStreak = 0;
         GameMain.extraPoint = 0;
         GameMain.extraMultiple = 0;
         // 当前版本先弱化构筑，重开一局时清掉临时Charm。
@@ -109,6 +112,7 @@ export default class GameMain extends cc.Component {
         GameMain.curStageIndex = 0;
         GameMain.gameFinished = false;
         GameMain.gameResultType = "stageWin";
+        GameMain.curWinStreak = 0;
         GameMain.extraPoint = 0;
         GameMain.extraMultiple = 0;
         GameMain.charmDatas = [];
@@ -118,6 +122,11 @@ export default class GameMain extends cc.Component {
     getChallengeStageScore():number{
         // 总成绩按章节累加，2章各10关，方便排行榜展示“今天冲到第几关”
         return GameMain.curChapterIndex * 10 + GameMain.curStageIndex + 1;
+    }
+
+    addWinStreak(){
+        // 只记录本次挑战内的连续胜利，不持久化，重开或回主页后自然清空。
+        GameMain.curWinStreak++;
     }
 
     reportBestDamage(damage:number){
