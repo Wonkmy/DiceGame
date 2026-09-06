@@ -101,7 +101,7 @@ export default class GameMain extends cc.Component {
         GameMain.curStageIndex = 0;
         GameMain.gameFinished = false;
         GameMain.gameResultType = "stageWin";
-        GameMain.isNewUserChapterNameFlow = false;
+        this.finishNewUserFirstFlow();
         GameMain.curWinStreak = 0;
         GameMain.extraPoint = 0;
         GameMain.extraMultiple = 0;
@@ -115,11 +115,21 @@ export default class GameMain extends cc.Component {
         GameMain.curStageIndex = 0;
         GameMain.gameFinished = false;
         GameMain.gameResultType = "stageWin";
+        this.finishNewUserFirstFlow();
         GameMain.curWinStreak = 0;
         GameMain.extraPoint = 0;
         GameMain.extraMultiple = 0;
         GameMain.charmDatas = [];
         DiceGameSave.resetCurrentGame();
+    }
+
+    /**
+     * 结束新用户首局特殊流程。
+     * 只清运行期标记，不清本地存档里的新老用户记录，避免老玩家被重新判成新玩家。
+     */
+    finishNewUserFirstFlow(){
+        GameMain.isNewUserFirstPlay = false;
+        GameMain.isNewUserChapterNameFlow = false;
     }
 
     getChallengeStageScore():number{
@@ -133,40 +143,24 @@ export default class GameMain extends cc.Component {
     }
 
     reportBestDamage(damage:number){
-        if (cc.sys.platform != cc.sys.WECHAT_GAME || typeof wx === "undefined") {
+        if (!this.canUseWechatCloudStorage()) {
             return;
         }
 
-        wx.setUserCloudStorage({
-            KVDataList: [
-                { key: "rk_damage", value: `${damage}` }
-            ],
-            success: () => {
-                console.log("最高一剑上报成功：" + damage);
-            },
-            fail: (err: any) => {
-                console.error("最高一剑上报失败：", err);
-            }
-        });
+        this.safeSetUserCloudStorage([
+            { key: "rk_damage", value: `${damage}` }
+        ], "最高一剑", damage);
     }
 
     reportBestStage(stage:number){
-        if (cc.sys.platform != cc.sys.WECHAT_GAME || typeof wx === "undefined") {
+        if (!this.canUseWechatCloudStorage()) {
             return;
         }
 
-        wx.setUserCloudStorage({
-            KVDataList: [
-                // rkstage 是微信后台申请的排行榜唯一 ID，旧的 rk_stage 不再使用。
-                { key: "rkstage", value: `${stage}` }
-            ],
-            success: () => {
-                console.log("最高关卡上报成功：" + stage);
-            },
-            fail: (err: any) => {
-                console.error("最高关卡上报失败：", err);
-            }
-        });
+        this.safeSetUserCloudStorage([
+            // rkstage 是微信后台申请的排行榜唯一 ID，旧的 rk_stage 不再使用。
+            { key: "rkstage", value: `${stage}` }
+        ], "最高关卡", stage);
     }
 
     reportTodayChallengeResult(){
@@ -178,24 +172,44 @@ export default class GameMain extends cc.Component {
     }
 
     reportChallengeRank(stage:number){
-        if (cc.sys.platform != cc.sys.WECHAT_GAME || typeof wx === "undefined") {
+        if (!this.canUseWechatCloudStorage()) {
             return;
         }
 
         let regionName:string = DiceGameSave.getRegionName();
-        wx.setUserCloudStorage({
-            KVDataList: [
-                // rkstage 是微信小游戏后台申请的排行榜唯一 ID，用今日最好关卡作为榜单成绩。
-                { key: "rkstage", value: `${stage}` },
-                { key: "rk_region", value: regionName },
-                { key: "rk_region_stage", value: `${regionName}_${stage}` }
-            ],
-            success: () => {
-                console.log("今日挑战成绩上报成功：" + stage);
-            },
-            fail: (err: any) => {
-                console.error("今日挑战成绩上报失败：", err);
-            }
-        });
+        this.safeSetUserCloudStorage([
+            // rkstage 是微信小游戏后台申请的排行榜唯一 ID，用今日最好关卡作为榜单成绩。
+            { key: "rkstage", value: `${stage}` },
+            { key: "rk_region", value: regionName },
+            { key: "rk_region_stage", value: `${regionName}_${stage}` }
+        ], "今日挑战成绩", stage);
+    }
+
+    /**
+     * 判断当前环境是否支持微信开放数据上报。
+     * 不支持时直接跳过，避免浏览器、本地调试或接口缺失导致结算流程报错。
+     */
+    private canUseWechatCloudStorage():boolean{
+        return cc.sys.platform === cc.sys.WECHAT_GAME && typeof wx !== "undefined" && !!wx.setUserCloudStorage;
+    }
+
+    /**
+     * 安全上报微信开放数据。
+     * 上报失败只记录日志，不阻断战斗结算、排行榜入口和返回主页流程。
+     */
+    private safeSetUserCloudStorage(kvDataList:any[], logName:string, score:number){
+        try{
+            wx.setUserCloudStorage({
+                KVDataList: kvDataList,
+                success: () => {
+                    console.log(logName + "上报成功：" + score);
+                },
+                fail: (err: any) => {
+                    console.error(logName + "上报失败：", err);
+                }
+            });
+        }catch(e){
+            console.error(logName + "上报异常：", e);
+        }
     }
 }

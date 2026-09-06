@@ -5,28 +5,39 @@ declare const wx: any;
 
 export default class ShareManager {
     static initShareMenu() {
-        if (cc.sys.platform !== cc.sys.WECHAT_GAME || typeof wx === "undefined") {
+        if (!this.canUseWechatShare()) {
             return;
         }
 
-        wx.showShareMenu({
-            menus: ["shareAppMessage", "shareTimeline"],
-        });
+        try{
+            if(wx.showShareMenu){
+                wx.showShareMenu({
+                    menus: ["shareAppMessage", "shareTimeline"],
+                });
+            }
 
-        wx.onShareAppMessage(() => {
-            return this.getShareData();
-        });
+            if(wx.onShareAppMessage){
+                wx.onShareAppMessage(() => {
+                    return this.getShareData();
+                });
+            }
 
-        wx.onShareTimeline(() => {
-            return {
-                title: ConstValue.SHARE_TIMELINE_TITLE,
-                query: ConstValue.SHARE_TIMELINE_QUERY,
-            };
-        });
+            if(wx.onShareTimeline){
+                wx.onShareTimeline(() => {
+                    return {
+                        title: ConstValue.SHARE_TIMELINE_TITLE,
+                        query: ConstValue.SHARE_TIMELINE_QUERY,
+                    };
+                });
+            }
+        }catch(e){
+            console.error("初始化微信分享菜单失败:", e);
+        }
     }
 
     static shareBestDamage() {
-        if (cc.sys.platform !== cc.sys.WECHAT_GAME || typeof wx === "undefined" || !wx.shareAppMessage) {
+        if (!this.canUseWechatShare()) {
+            console.log("当前环境不支持微信分享，跳过分享战绩");
             return;
         }
 
@@ -44,8 +55,9 @@ export default class ShareManager {
         };
         this.addShareImage(shareData);
 
-        if (cc.sys.platform !== cc.sys.WECHAT_GAME || typeof wx === "undefined" || !wx.shareAppMessage) {
-            callback && callback();
+        if (!this.canUseWechatShare()) {
+            console.log("当前环境不支持微信分享，本地直接走求助回调");
+            this.safeCallback(callback);
             return;
         }
 
@@ -53,12 +65,12 @@ export default class ShareManager {
             wx.shareAppMessage(shareData);
         }catch(e){
             console.error("分享求助失败:", e);
-            callback && callback();
+            this.safeCallback(callback);
             return;
         }
         // 微信分享回调不稳定，第一版按调起分享后给复活机会。
         setTimeout(() => {
-            callback && callback();
+            this.safeCallback(callback);
         }, 800);
     }
 
@@ -69,8 +81,9 @@ export default class ShareManager {
         };
         this.addShareImage(shareData);
 
-        if (cc.sys.platform !== cc.sys.WECHAT_GAME || typeof wx === "undefined" || !wx.shareAppMessage) {
-            callback && callback();
+        if (!this.canUseWechatShare()) {
+            console.log("当前环境不支持微信分享，本地直接走补次数回调");
+            this.safeCallback(callback);
             return;
         }
 
@@ -78,13 +91,35 @@ export default class ShareManager {
             wx.shareAppMessage(shareData);
         }catch(e){
             console.error("分享挑战失败:", e);
-            callback && callback();
+            this.safeCallback(callback);
             return;
         }
         // 微信无法稳定确认是否真的分享成功，第一版按调起分享后给额外挑战机会。
         setTimeout(() => {
-            callback && callback();
+            this.safeCallback(callback);
         }, 800);
+    }
+
+    /**
+     * 判断当前环境是否可以调用微信分享 API。
+     * 只做平台能力判断，避免浏览器/本地调试环境调用 wx 导致主流程中断。
+     */
+    private static canUseWechatShare():boolean{
+        return cc.sys.platform === cc.sys.WECHAT_GAME && typeof wx !== "undefined" && !!wx.shareAppMessage;
+    }
+
+    /**
+     * 安全执行分享后的业务回调。
+     * 分享 API 失败不能阻断复活、补次数等主流程。
+     */
+    private static safeCallback(callback:Function){
+        if(!callback)return;
+
+        try{
+            callback();
+        }catch(e){
+            console.error("分享回调执行失败:", e);
+        }
     }
 
     private static getShareData() {

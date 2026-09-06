@@ -139,23 +139,46 @@ export default class RankPanel extends BaseUI {
     }
 
     private refreshRank(){
-        if(cc.sys.platform !== cc.sys.WECHAT_GAME || typeof wx === "undefined" || !wx.getOpenDataContext){
+        if(!this.canUseOpenDataContext()){
             this.showLocalTip();
             return;
         }
 
-        this.openContext = wx.getOpenDataContext();
-        if(!this.openContext)return;
+        try{
+            this.openContext = wx.getOpenDataContext();
+        }catch(e){
+            console.error("获取微信开放数据域失败:", e);
+            this.showLocalTip();
+            return;
+        }
+
+        if(!this.openContext || !this.openContext.postMessage){
+            this.showLocalTip();
+            return;
+        }
 
         // 打开榜单时补上报一次，避免刚结算后的成绩没有同步到好友榜。
         GameMain.instance.reportChallengeRank(DiceGameSave.getTodayBestStage());
 
-        this.openContext.postMessage({
-            type: "engine",
-            event: "level",
-            key: this.rankKey,
-            page: this.currentPage,
-        });
+        try{
+            this.openContext.postMessage({
+                type: "engine",
+                event: "level",
+                key: this.rankKey,
+                page: this.currentPage,
+            });
+        }catch(e){
+            console.error("刷新微信好友榜失败:", e);
+            this.showLocalTip();
+        }
+    }
+
+    /**
+     * 判断当前环境是否支持微信开放数据域。
+     * 不支持时显示本地提示，不影响主流程继续游玩。
+     */
+    private canUseOpenDataContext():boolean{
+        return cc.sys.platform === cc.sys.WECHAT_GAME && typeof wx !== "undefined" && !!wx.getOpenDataContext;
     }
 
     private showLocalTip(){
@@ -184,11 +207,20 @@ export default class RankPanel extends BaseUI {
     }
 
     private clearOpenDataContext(){
-        if(!this.openContext)return;
-        this.openContext.postMessage({
-            type: "engine",
-            event: "clear",
-        });
+        if(!this.openContext || !this.openContext.postMessage){
+            this.openContext = null;
+            return;
+        }
+
+        try{
+            this.openContext.postMessage({
+                type: "engine",
+                event: "clear",
+            });
+        }catch(e){
+            console.error("清理微信好友榜失败:", e);
+        }
+        this.openContext = null;
     }
 
     override onDestroy(): void {

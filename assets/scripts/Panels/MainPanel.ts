@@ -200,6 +200,7 @@ export default class MainPanel extends BaseUI {
         this.hasUsedFixedDicePoints = false;
         this.firstGuideActive = false;
         this.attackVisualPlaying = false;
+        this.hideFirstGuideText();
 
         let gamingContainer:cc.Node = this.node.getChildByName("GamingContainer");
         if(!gamingContainer)return;
@@ -1023,6 +1024,26 @@ export default class MainPanel extends BaseUI {
             this.moveGuideTextToAttackBtnBottom();
         }else{
             this.resetGuideTextPos();
+        }
+    }
+
+    /**
+     * 隐藏新手引导提示。
+     * 重新进 MainPanel、失败、回主页时都要清掉，避免上一次提示残留到老玩家流程。
+     */
+    public hideFirstGuideText(){
+        if(!this.testip)return;
+
+        let guideRoot:cc.Node = this.getGuideTipRoot();
+        if(guideRoot && cc.isValid(guideRoot)){
+            cc.Tween.stopAllByTarget(guideRoot);
+            guideRoot.active = false;
+            guideRoot.opacity = 255;
+        }
+        if(this.testip.node && cc.isValid(this.testip.node)){
+            cc.Tween.stopAllByTarget(this.testip.node);
+            this.testip.node.active = false;
+            this.testip.node.opacity = 255;
         }
     }
 

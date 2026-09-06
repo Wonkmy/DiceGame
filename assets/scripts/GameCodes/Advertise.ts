@@ -14,7 +14,7 @@ export class Advertise {
     }
 
     static initVideoAd() {
-        if (cc.sys.platform !== cc.sys.WECHAT_GAME || typeof wx === "undefined" || !this.VIDEO_ID) {
+        if (!this.canUseWechatAd() || !this.VIDEO_ID || !wx.createRewardedVideoAd) {
             return;
         }
 
@@ -22,9 +22,11 @@ export class Advertise {
             this.videoAd = wx.createRewardedVideoAd({
                 adUnitId: this.VIDEO_ID,
             });
-            this.videoAd.onError((err: any) => {
-                console.log("视频广告拉取失败", err);
-            });
+            if(this.videoAd.onError){
+                this.videoAd.onError((err: any) => {
+                    console.log("视频广告拉取失败", err);
+                });
+            }
         } catch (e) {
             console.log("视频广告创建失败", e);
             this.videoAd = null;
@@ -32,7 +34,7 @@ export class Advertise {
     }
 
     static initChapingAd() {
-        if (cc.sys.platform !== cc.sys.WECHAT_GAME || typeof wx === "undefined" || !this.CHAPING_ID) {
+        if (!this.canUseWechatAd() || !this.CHAPING_ID || !wx.createInterstitialAd) {
             return;
         }
 
@@ -40,9 +42,11 @@ export class Advertise {
             this.chaPingAd = wx.createInterstitialAd({
                 adUnitId: this.CHAPING_ID,
             });
-            this.chaPingAd.onError((err: any) => {
-                console.log("插屏广告拉取失败", err);
-            });
+            if(this.chaPingAd.onError){
+                this.chaPingAd.onError((err: any) => {
+                    console.log("插屏广告拉取失败", err);
+                });
+            }
         } catch (e) {
             console.log("插屏广告创建失败", e);
             this.chaPingAd = null;
@@ -50,35 +54,87 @@ export class Advertise {
     }
 
     static showVideoAd(callback: Function) {
-        if (!this.videoAd) {
-            callback && callback(0);
+        if (!this.videoAd || !this.videoAd.show || !this.videoAd.onClose) {
+            this.safeCallback(callback, 0);
             return;
         }
 
-        this.videoAd.show()
-            .catch(() => {
-                this.videoAd.load()
-                    .then(() => this.videoAd.show())
-                    .catch(() => callback && callback(0));
-            });
-
-        this.videoAd.onClose((res: any) => {
-            this.videoAd.offClose();
-            if (res && res.isEnded || res === undefined) {
-                callback && callback(1);
-            } else {
-                callback && callback(2);
+        try{
+            if(this.videoAd.offClose){
+                this.videoAd.offClose();
             }
-        });
+            if(this.videoAd.onClose){
+                this.videoAd.onClose((res: any) => {
+                    if(this.videoAd && this.videoAd.offClose){
+                        this.videoAd.offClose();
+                    }
+                    if ((res && res.isEnded) || res === undefined) {
+                        this.safeCallback(callback, 1);
+                    } else {
+                        this.safeCallback(callback, 2);
+                    }
+                });
+            }
+
+            let showResult:any = this.videoAd.show();
+            if(showResult && showResult.catch){
+                showResult.catch(() => {
+                    if(!this.videoAd || !this.videoAd.load){
+                        this.safeCallback(callback, 0);
+                        return;
+                    }
+                    let loadResult:any = this.videoAd.load();
+                    if(loadResult && loadResult.then){
+                        loadResult
+                            .then(() => this.videoAd.show())
+                            .catch(() => this.safeCallback(callback, 0));
+                    }else{
+                        this.safeCallback(callback, 0);
+                    }
+                });
+            }
+        }catch(e){
+            console.log("视频广告展示异常", e);
+            this.safeCallback(callback, 0);
+        }
     }
 
     static showChapingAd() {
-        if (!this.chaPingAd) {
+        if (!this.chaPingAd || !this.chaPingAd.show) {
             return;
         }
 
-        this.chaPingAd.show().catch((err: any) => {
-            console.log("插屏广告展示失败", err);
-        });
+        try{
+            let showResult:any = this.chaPingAd.show();
+            if(showResult && showResult.catch){
+                showResult.catch((err: any) => {
+                    console.log("插屏广告展示失败", err);
+                });
+            }
+        }catch(e){
+            console.log("插屏广告展示异常", e);
+        }
+    }
+
+    /**
+     * 判断当前环境是否支持微信广告 API。
+     * 不支持时直接跳过广告，保证结算和复活流程不被广告打断。
+     */
+    private static canUseWechatAd():boolean{
+        return cc.sys.platform === cc.sys.WECHAT_GAME && typeof wx !== "undefined";
+    }
+
+    /**
+     * 安全执行广告结束回调。
+     * 0 表示广告不可用/失败，1 表示完整观看，2 表示中途关闭。
+     */
+    private static safeCallback(callback:Function, result:number){
+        if(!callback)return;
+
+        try{
+            callback(result);
+        }catch(e){
+            console.log("广告回调执行失败", e);
+        }
     }
 }

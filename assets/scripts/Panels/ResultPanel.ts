@@ -106,7 +106,7 @@ export default class ResultPanel extends BaseUI{
         let btnLabel = this.btn_next.getChildByName("nextLevel").getComponent(cc.Label);
         let resultText = "";
         let stageScore:number = GameMain.instance.getChallengeStageScore();
-        let chapterName:string = GameMain.curChapterIndex <= 0 ? "新手章节" : "深渊章节";
+        let chapterName:string = this.getResultChapterName();
         let todayBestStage:number = DiceGameSave.getTodayBestStage();
         let overtakePercent:number = DiceGameSave.getRegionOvertakePercent();
         this.resultDetailText = this.getResultDetailText(stageScore, chapterName, todayBestStage, overtakePercent);
@@ -265,6 +265,18 @@ export default class ResultPanel extends BaseUI{
     private getResultDetailText(stageScore:number, chapterName:string, todayBestStage:number, overtakePercent:number){
         // “超过本地区”目前是本地估算，不放到提审外显文案，避免被理解成真实地区排行榜数据。
         return `本次关卡：第${stageScore}关\n当前章节：${chapterName}\n今日最好：${todayBestStage}关\n挑战指数：${overtakePercent}\n剩余挑战：${DiceGameSave.getRemainDailyChallengeCount()}/${DiceGameSave.MAX_DAILY_CHALLENGE_COUNT}\n好友助战：${DiceGameSave.getRemainDailyShareHelpCount()}/${DiceGameSave.MAX_DAILY_SHARE_HELP_COUNT}`;
+    }
+
+    /**
+     * 获取结果页章节显示名。
+     * 和章节预告页保持一致：新用户首次流程显示“新手章节”，老玩家第1章显示“骰火营地”。
+     */
+    private getResultChapterName():string{
+        if(GameMain.curChapterIndex <= 0){
+            return GameMain.isNewUserChapterNameFlow ? "新手章节" : "骰火营地";
+        }
+
+        return "深渊章节";
     }
 
     private showHomeBtn(show:boolean){

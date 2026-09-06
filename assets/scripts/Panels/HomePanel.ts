@@ -220,10 +220,11 @@ export default class HomePanel extends BaseUI {
     }
 
     private startGame(){
+        // 先重置挑战数据，再打开战斗界面，避免 MainPanel.onShow 读取到上一局残留关卡或状态。
+        GameMain.instance.resetRunData();
         UIManager.getInstance().closeUI(HomePanel);
         UIManager.getInstance().openUI(MainPanel,0,(ui:MainPanel)=>{
             ui.onShow();
-            GameMain.instance.resetRunData();
             GameMain.instance.player.getDices();
             GameMain.instance.playMarketBgmOnce();
         })

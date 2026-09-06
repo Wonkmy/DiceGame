@@ -201,6 +201,9 @@ export default class Player extends cc.Component {
         if(this.curHP <= 0){
             GameMain.gameFinished = true;
             GameMain.gameResultType = "fail";
+            // 首局一旦失败，就结束新手首局特殊状态，后续重开/回主页都走老玩家流程。
+            GameMain.instance.finishNewUserFirstFlow();
+            MainPanel.instance.hideFirstGuideText();
             // 挑战失败后，本次挑战连胜立即清空。
             GameMain.curWinStreak = 0;
             MainPanel.instance.openResultPanel();
