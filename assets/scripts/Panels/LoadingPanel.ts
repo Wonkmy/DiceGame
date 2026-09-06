@@ -51,6 +51,8 @@ export default class LoadingPanel extends BaseUI {
             UIManager.getInstance().openUI(MainPanel,0,(ui:MainPanel)=>{
                 ui.onShow();
                 GameMain.instance.resetRunData();
+                // 新用户首次自动进入后的本轮挑战和失败重试，章节预告页继续显示“新手章节”。
+                GameMain.isNewUserChapterNameFlow = true;
                 GameMain.instance.player.getDices();
                 GameMain.instance.playMarketBgmOnce();
             })

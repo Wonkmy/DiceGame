@@ -30,7 +30,11 @@ export default class ShareManager {
             return;
         }
 
-        wx.shareAppMessage(this.getShareData());
+        try{
+            wx.shareAppMessage(this.getShareData());
+        }catch(e){
+            console.error("分享最高伤害失败:", e);
+        }
     }
 
     static shareHelp(stage:number, callback:Function) {
@@ -45,7 +49,13 @@ export default class ShareManager {
             return;
         }
 
-        wx.shareAppMessage(shareData);
+        try{
+            wx.shareAppMessage(shareData);
+        }catch(e){
+            console.error("分享求助失败:", e);
+            callback && callback();
+            return;
+        }
         // 微信分享回调不稳定，第一版按调起分享后给复活机会。
         setTimeout(() => {
             callback && callback();
@@ -64,7 +74,13 @@ export default class ShareManager {
             return;
         }
 
-        wx.shareAppMessage(shareData);
+        try{
+            wx.shareAppMessage(shareData);
+        }catch(e){
+            console.error("分享挑战失败:", e);
+            callback && callback();
+            return;
+        }
         // 微信无法稳定确认是否真的分享成功，第一版按调起分享后给额外挑战机会。
         setTimeout(() => {
             callback && callback();

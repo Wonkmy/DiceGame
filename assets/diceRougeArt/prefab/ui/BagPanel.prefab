@@ -1098,9 +1098,9 @@
     "_opacity": 255,
     "_color": {
       "__type__": "cc.Color",
-      "r": 88,
-      "g": 63,
-      "b": 33,
+      "r": 255,
+      "g": 255,
+      "b": 255,
       "a": 255
     },
     "_contentSize": {
@@ -1117,7 +1117,7 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        326.212,
+        300.56,
         244.659,
         0,
         0,

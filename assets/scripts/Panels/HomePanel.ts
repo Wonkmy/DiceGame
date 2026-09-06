@@ -56,19 +56,13 @@ export default class HomePanel extends BaseUI {
         }
 
         if(this.btn_share){
-            // this.btn_share.off(cc.Node.EventType.TOUCH_END);
-            this.btn_share.on(cc.Node.EventType.TOUCH_END, () => {
-                ShareManager.shareBestDamage();
-            }, this);
+            this.btn_share.off(cc.Node.EventType.TOUCH_END, this.onShareBestDamage, this);
+            this.btn_share.on(cc.Node.EventType.TOUCH_END, this.onShareBestDamage, this);
         }
 
         if(this.btn_setting){
-            // this.btn_setting.off(cc.Node.EventType.TOUCH_END);
-            this.btn_setting.on(cc.Node.EventType.TOUCH_END, () => {
-                UIManager.getInstance().openUI(SettingPanel, 1, (ui: SettingPanel) => {
-                    ui.onShow();
-                });
-            }, this);
+            this.btn_setting.off(cc.Node.EventType.TOUCH_END, this.onOpenSetting, this);
+            this.btn_setting.on(cc.Node.EventType.TOUCH_END, this.onOpenSetting, this);
         }
 
         if(this.btn_rank){
@@ -150,11 +144,11 @@ export default class HomePanel extends BaseUI {
             this.isSharingChallenge = false;
             if(!DiceGameSave.consumeDailyShareChallengeChance()){
                 this.refreshStartView();
-                GameMain.instance.showTip("今日额外挑战已用完，明日再战！");
+                GameMain.instance.showTip("今日助战机会已用完，明日再战！");
                 return;
             }
 
-            // 分享补 1 次，再立刻消耗这 1 次进入挑战。
+            // 好友助战补 1 次，再立刻消耗这 1 次进入挑战。
             DiceGameSave.addDailyChallengeChance(1);
             if(!DiceGameSave.consumeDailyChallengeChance()){
                 this.refreshStartView();
@@ -179,11 +173,11 @@ export default class HomePanel extends BaseUI {
         let remainChallenge:number = DiceGameSave.getRemainDailyChallengeCount();
         let remainShareChallenge:number = DiceGameSave.getRemainDailyShareChallengeCount();
 
-        // 今日正常次数用完后，才显示分享补次数；都用完后，引导玩家分享战绩。
+        // 今日正常次数用完后，才显示好友助战入口；都用完后，引导玩家分享战绩。
         if(remainChallenge > 0){
             label.string = "开始挑战";
         }else if(remainShareChallenge > 0){
-            label.string = "分享再来一次";
+            label.string = "好友助战";
         }else{
             label.string = "分享战绩";
         }
@@ -207,6 +201,24 @@ export default class HomePanel extends BaseUI {
         });
     }
 
+    /**
+     * 分享今日战绩。
+     * 用具名函数绑定，避免 HomePanel 重复 onShow 时按钮事件叠加。
+     */
+    private onShareBestDamage(){
+        ShareManager.shareBestDamage();
+    }
+
+    /**
+     * 打开设置界面。
+     * 用具名函数绑定，保证 onDestroy/off 能准确移除事件。
+     */
+    private onOpenSetting(){
+        UIManager.getInstance().openUI(SettingPanel, 1, (ui: SettingPanel) => {
+            ui.onShow();
+        });
+    }
+
     private startGame(){
         UIManager.getInstance().closeUI(HomePanel);
         UIManager.getInstance().openUI(MainPanel,0,(ui:MainPanel)=>{
@@ -223,15 +235,16 @@ export default class HomePanel extends BaseUI {
         }
 
         if(this.btn_share){
-            this.btn_share.off(cc.Node.EventType.TOUCH_END);
+            this.btn_share.off(cc.Node.EventType.TOUCH_END, this.onShareBestDamage, this);
         }
 
         if(this.btn_setting){
-            this.btn_setting.off(cc.Node.EventType.TOUCH_END);
+            this.btn_setting.off(cc.Node.EventType.TOUCH_END, this.onOpenSetting, this);
         }
 
         if(this.btn_rank){
             this.btn_rank.off(cc.Node.EventType.TOUCH_END, this.openRankPanel, this);
         }
+        HomePanel.instance = null!;
     }
 }

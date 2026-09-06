@@ -121,7 +121,7 @@ export default class ResultPanel extends BaseUI{
             this.showFirstFailHelpGuide = !DiceGameSave.hasShowFirstFailHelpGuide() && DiceGameSave.getRemainDailyShareHelpCount() > 0;
             if(this.showFirstFailHelpGuide){
                 DiceGameSave.markFirstFailHelpGuideShow();
-                resultText = `第${stageScore}关失败\n求助好友可再战`;
+                resultText = `第${stageScore}关失败\n好友助战可继续`;
             }else{
                 resultText = `第${stageScore}关失败\n差一点就过了`;
             }
@@ -175,7 +175,7 @@ export default class ResultPanel extends BaseUI{
             this.stopShareHelpBtnGuideLoop();
             this.btn_shareHelp.active = show;
             if(show){
-                this.setButtonLabel(this.btn_shareHelp, "求助再战");
+                this.setButtonLabel(this.btn_shareHelp, "好友助战");
                 this.startShareHelpBtnGuideLoop();
             }
         }
@@ -252,7 +252,7 @@ export default class ResultPanel extends BaseUI{
     private onShowDetail(){
         if(!this.resultDetailText || this.resultDetailText.length <= 0)return;
 
-        UIManager.getInstance().openUI(TipPanel, 0, (ui:TipPanel) => {
+        UIManager.getInstance().openUI(TipPanel, GameMain.TIP_UI_Z_ORDER, (ui:TipPanel) => {
             ui.onShow();
             ui.showTip(this.resultDetailText, null, false, 3.5);
         })
@@ -263,7 +263,8 @@ export default class ResultPanel extends BaseUI{
      * 这些信息不放在主结算上，避免玩家第一眼看到过多文字。
      */
     private getResultDetailText(stageScore:number, chapterName:string, todayBestStage:number, overtakePercent:number){
-        return `本次关卡：第${stageScore}关\n当前章节：${chapterName}\n今日最好：${todayBestStage}关\n超过本地区：${overtakePercent}%玩家\n剩余挑战：${DiceGameSave.getRemainDailyChallengeCount()}/${DiceGameSave.MAX_DAILY_CHALLENGE_COUNT}\n分享复活：${DiceGameSave.getRemainDailyShareHelpCount()}/${DiceGameSave.MAX_DAILY_SHARE_HELP_COUNT}\n地区：${DiceGameSave.getRegionName()}`;
+        // “超过本地区”目前是本地估算，不放到提审外显文案，避免被理解成真实地区排行榜数据。
+        return `本次关卡：第${stageScore}关\n当前章节：${chapterName}\n今日最好：${todayBestStage}关\n挑战指数：${overtakePercent}\n剩余挑战：${DiceGameSave.getRemainDailyChallengeCount()}/${DiceGameSave.MAX_DAILY_CHALLENGE_COUNT}\n好友助战：${DiceGameSave.getRemainDailyShareHelpCount()}/${DiceGameSave.MAX_DAILY_SHARE_HELP_COUNT}`;
     }
 
     private showHomeBtn(show:boolean){

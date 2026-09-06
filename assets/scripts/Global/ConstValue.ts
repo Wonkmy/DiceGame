@@ -6,17 +6,17 @@ export class ConstValue {
     public static readonly REROLL_COST = 400;
     public static readonly TotalPoints = 9;// 鉴赏时可以最多操作几次
 
-    public static readonly SHARE_RESULT_TITLE = "我今天冲到第{stage}关，超过本地区{percent}%玩家";
+    public static readonly SHARE_RESULT_TITLE = "我今天冲到第{stage}关，来试试你能到第几关";
     public static readonly SHARE_RESULT_QUERY = "from=share&stage={stage}&damage={damage}";
     // 分享卡片图片，可填审核域名下的网络图，也可以填微信包内图片路径；为空则只分享文字。
     public static readonly SHARE_CARD_IMAGE_URL = "";
-    public static readonly SHARE_DAMAGE_TITLE = "我一剑打出{damage}伤害，你能超过吗？";
+    public static readonly SHARE_DAMAGE_TITLE = "我一剑打出{damage}伤害，来试试你的手气";
     public static readonly SHARE_DAMAGE_QUERY = "from=share&damage={damage}";
-    public static readonly SHARE_TIMELINE_TITLE = "我在《就骰这亿把》打出了最高一剑，来挑战我！";
+    public static readonly SHARE_TIMELINE_TITLE = "《就骰这亿把》今日挑战，看看你能闯到第几关";
     public static readonly SHARE_TIMELINE_QUERY = "from=timeline";
-    public static readonly SHARE_HELP_TITLE = "我卡在第{stage}关了，帮我助力再来一次！";
+    public static readonly SHARE_HELP_TITLE = "我卡在第{stage}关了，差一点就过了";
     public static readonly SHARE_HELP_QUERY = "from=help&stage={stage}";
-    public static readonly SHARE_CHALLENGE_TITLE = "今日挑战次数用完了，帮我解锁一次挑战！";
+    public static readonly SHARE_CHALLENGE_TITLE = "今日挑战已结束，来看看你的手气";
     public static readonly SHARE_CHALLENGE_QUERY = "from=challenge";
     // public static readonly SCREEN_HEIGHT = 1334;
     // public static readonly SCREEN_WIDTH = 750;

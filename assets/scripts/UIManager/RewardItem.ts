@@ -37,7 +37,7 @@ export default class RewardItem extends cc.Component {
     }
 
     private onClick(){
-        UIManager.getInstance().openUI(TipPanel, 0, (ui: TipPanel) => {
+        UIManager.getInstance().openUI(TipPanel, GameMain.TIP_UI_Z_ORDER, (ui: TipPanel) => {
             ui.onShow();
             ui.showTip(this.charmData.desc,null)
         })

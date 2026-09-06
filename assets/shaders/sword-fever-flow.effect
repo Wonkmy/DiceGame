@@ -1,0 +1,81 @@
+CCEffect %{
+  techniques:
+  - passes:
+    - vert: vs
+      frag: fs
+      blendState:
+        targets:
+        - blend: true
+      rasterizerState:
+        cullMode: none
+      properties:
+        texture: { value: white }
+        flowParams: { value: [1.0, 0.75, 1.25, 0.0] }
+}%
+
+CCProgram vs %{
+  precision highp float;
+
+  #include <cc-global>
+
+  in vec3 a_position;
+  in vec2 a_uv0;
+  in vec4 a_color;
+
+  out vec2 v_uv0;
+  out vec4 v_color;
+
+  void main () {
+    gl_Position = cc_matViewProj * vec4(a_position, 1.0);
+    v_uv0 = a_uv0;
+    v_color = a_color;
+  }
+}%
+
+CCProgram fs %{
+  precision highp float;
+
+  #include <cc-global>
+  #include <texture>
+
+  uniform sampler2D texture;
+
+  uniform ARGS {
+    vec4 flowParams;
+  };
+
+  in vec2 v_uv0;
+  in vec4 v_color;
+
+  vec4 sampleTex(vec2 uv) {
+    vec4 c = vec4(1.0);
+    CCTexture(texture, uv, c);
+    return c;
+  }
+
+  void main () {
+    float t = cc_time.x * flowParams.z;
+    vec2 uv = v_uv0;
+
+    vec4 originColor = sampleTex(uv);
+
+    // 只在原图有效透明区域内做流光，不再偏移采样整张图，避免半透明边缘混出脏色块。
+    float cleanAlpha = smoothstep(0.08, 0.35, originColor.a);
+    if(cleanAlpha <= 0.01){
+      discard;
+    }
+
+    // 横向推进的亮带叠加一点波动，模拟剑气沿剑身流动。
+    float wave = sin((uv.x * 18.0 - t * 6.0) + sin(uv.y * 12.0 + t * 2.0) * 0.8);
+    float band = smoothstep(0.35, 1.0, wave) * cleanAlpha * flowParams.x;
+
+    // 保留原图火焰颜色，只加金白高光，不做暗色混合。
+    vec3 hotColor = vec3(1.0, 0.88, 0.32);
+    vec3 whiteCore = vec3(1.0, 0.98, 0.72);
+    vec3 finalRgb = originColor.rgb;
+    finalRgb = mix(finalRgb, hotColor, band * 0.28 * flowParams.y);
+    finalRgb += whiteCore * band * 0.18 * flowParams.y;
+
+    gl_FragColor = vec4(finalRgb, originColor.a * cleanAlpha) * v_color;
+  }
+}%

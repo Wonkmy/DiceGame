@@ -73,7 +73,8 @@ export default class RankPanel extends BaseUI {
 
         if(this.globalRankShowTargetTip){
             this.globalRankShowTargetTip.node.active = true;
-            this.globalRankShowTargetTip.string = `今日最好 ${DiceGameSave.getTodayBestStage()}关，超过本地区 ${DiceGameSave.getRegionOvertakePercent()}% 玩家`;
+            // 当前只有真实好友榜，地区排行暂未接服务器，提审外显不写“超过本地区”。
+            this.globalRankShowTargetTip.string = `今日最好 ${DiceGameSave.getTodayBestStage()}关`;
         }
 
         let titleNode = this.node.getChildByName("title");

@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "c611557f-9d8e-467f-99b3-dcf16086c231",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 166,
+  "height": 168,
+  "platformSettings": {},
+  "subMetas": {
+    "reroll_button": {
+      "ver": "1.0.6",
+      "uuid": "ba3334af-f93a-463f-9747-f82385bf773d",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "c611557f-9d8e-467f-99b3-dcf16086c231",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": 1,
+      "trimX": 32,
+      "trimY": 30,
+      "width": 159,
+      "height": 174,
+      "rawWidth": 223,
+      "rawHeight": 236,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

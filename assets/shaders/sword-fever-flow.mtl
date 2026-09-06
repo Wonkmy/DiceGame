@@ -1,0 +1,15 @@
+{
+  "__type__": "cc.Material",
+  "_name": "sword-fever-flow",
+  "_objFlags": 0,
+  "_native": "",
+  "_effectAsset": {
+    "__uuid__": "b118f2bd-5d99-4e3d-9ce8-68d45d316b21"
+  },
+  "_techniqueIndex": 0,
+  "_techniqueData": {
+    "0": {
+      "defines": {}
+    }
+  }
+}

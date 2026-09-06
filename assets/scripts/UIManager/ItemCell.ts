@@ -25,7 +25,7 @@ export default class ItemCell extends cc.Component {
     }
 
     private onTip(){
-        UIManager.getInstance().openUI(TipPanel,1,(ui:TipPanel)=>{
+        UIManager.getInstance().openUI(TipPanel,GameMain.TIP_UI_Z_ORDER,(ui:TipPanel)=>{
             ui.onShow();
             ui.showTip(getDescByDiceType(this.dType),null)
         })

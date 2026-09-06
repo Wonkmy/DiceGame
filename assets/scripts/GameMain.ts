@@ -31,7 +31,9 @@ export default class GameMain extends cc.Component {
     static gameFinished:boolean = false;
     static gameResultType:string = "stageWin";// stageWin:小关胜利 fail:失败 chapterWin:章节通关
     static isNewUserFirstPlay:boolean = false;// 本次启动是否为新用户自动进入的首局
+    static isNewUserChapterNameFlow:boolean = false;// 新用户首次自动进入后的本轮流程，章节名保持“新手章节”
     static curWinStreak:number = 0;// 本次挑战内连续胜利次数，失败/重开/回主页后清空
+    static readonly TIP_UI_Z_ORDER:number = 99;// 通用提示层级，保证 TipPanel 不会被后续弹窗盖住
 
 
     // 如果有道具或者三选一的功能是改变点数和倍率的，直接使用这两个
@@ -81,7 +83,7 @@ export default class GameMain extends cc.Component {
     }
 
     showTip(content:string){
-        UIManager.getInstance().openUI(TipPanel,0,(ui:TipPanel)=>{
+        UIManager.getInstance().openUI(TipPanel,GameMain.TIP_UI_Z_ORDER,(ui:TipPanel)=>{
             ui.onShow();
             ui.showTip(content,null);
         })
@@ -99,6 +101,7 @@ export default class GameMain extends cc.Component {
         GameMain.curStageIndex = 0;
         GameMain.gameFinished = false;
         GameMain.gameResultType = "stageWin";
+        GameMain.isNewUserChapterNameFlow = false;
         GameMain.curWinStreak = 0;
         GameMain.extraPoint = 0;
         GameMain.extraMultiple = 0;
@@ -154,7 +157,8 @@ export default class GameMain extends cc.Component {
 
         wx.setUserCloudStorage({
             KVDataList: [
-                { key: "rk_stage", value: `${stage}` }
+                // rkstage 是微信后台申请的排行榜唯一 ID，旧的 rk_stage 不再使用。
+                { key: "rkstage", value: `${stage}` }
             ],
             success: () => {
                 console.log("最高关卡上报成功：" + stage);
@@ -168,7 +172,8 @@ export default class GameMain extends cc.Component {
     reportTodayChallengeResult(){
         // 结算和返回主页时补记一次，避免失败或中途返回导致今日榜成绩漏上报。
         DiceGameSave.recordStage(this.getChallengeStageScore());
-        this.reportBestStage(DiceGameSave.getBestStage());
+        // 好友榜当前只使用微信后台审核的 rkstage；旧的 rk_stage 上报先停用，避免榜单 key 混用。
+        // this.reportBestStage(DiceGameSave.getBestStage());
         this.reportChallengeRank(DiceGameSave.getTodayBestStage());
     }
 

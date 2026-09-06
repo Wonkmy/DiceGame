@@ -68,6 +68,12 @@ export default class MainPanel extends BaseUI {
     @property({type:cc.Node, displayName:"低血量警告特效", tooltip:"玩家血量较低时显示，建议放在血量图标附近"})
     lowHpWarningNode:cc.Node = null!;
 
+    @property({type:cc.Node, displayName:"剑狂热特效", tooltip:"凑到大牌型或高攻击力时显示，建议作为 sword 的子节点挂在剑背后"})
+    swordFeverEffectNode:cc.Node = null!;
+
+    @property({type:cc.Material, displayName:"剑狂热流光材质", tooltip:"拖拽 shaders/sword-fever-flow 材质，让剑气在图片内部流动"})
+    swordFeverMaterial:cc.Material = null!;
+
 
 
     onRollling:boolean = false;
@@ -98,6 +104,18 @@ export default class MainPanel extends BaseUI {
     @property({type:cc.Label, displayName:"当前关卡文本", tooltip:"显示当前挑战进度，例如：第3关"})
     curStageLabel:cc.Label = null!;
 
+    @property({type:cc.Node, displayName:"关卡开场提示节点", tooltip:"进入战斗时显示，例如：第4关。可挂Label或艺术字节点"})
+    stageStartTipNode:cc.Node = null!;
+
+    @property({type:cc.Label, displayName:"关卡开场提示文本", tooltip:"关卡开场提示节点中的文本组件"})
+    stageStartTipLabel:cc.Label = null!;
+
+    @property({type:cc.Node, displayName:"难度飙升提示节点", tooltip:"进入关键压力关时显示，例如：难度飙升"})
+    difficultyUpTipNode:cc.Node = null!;
+
+    @property({type:cc.Label, displayName:"难度飙升提示文本", tooltip:"难度飙升提示节点中的文本组件；如果使用艺术字节点，可以不拖"})
+    difficultyUpTipLabel:cc.Label = null!;
+
     private homeBtn:cc.Node = null!;
     private firstGuideTextOriginPos:cc.Vec2 = null!;
     private killReadyEffectOriginScale:number = null!;
@@ -107,16 +125,30 @@ export default class MainPanel extends BaseUI {
     private attackBtnOriginColor:cc.Color = null!;
     private attackBtnKillReadyPlaying:boolean = false;
     private attackBtnLocked:boolean = false;
+    private totalTextOriginPos:cc.Vec2 = null!;
+    private totalTextOriginScale:number = null!;
+    private totalTextOriginWidth:number = null!;
+    private swordOriginPos:cc.Vec2 = null!;
+    private swordOriginScale:number = null!;
+    private attackVisualPlaying:boolean = false;
+    private swordFeverOriginScale:number = null!;
+    private swordFeverOriginOpacity:number = null!;
+    private swordFeverLevel:number = 0;
+    private readonly ATTACK_LOCK_TIMEOUT:number = 8;
 
     onLoad(): void {
         MainPanel.instance = this;
         this.unusePointCount = 5;
         this.hideBattleWarningEffects();
+        this.hideStageStartTips();
+        this.applySwordFeverMaterial();
         this.loadData();
     }
 
     override onShow(): void {
+        this.clearRuntimeStateForPanelShow();
         this.hideBattleWarningEffects();
+        this.hideStageStartTips();
         this.refreshAllUIText(0,0,0,null,true);
         this.refreshCurStageLabel();
         GameMain.instance.player.init();
@@ -139,20 +171,82 @@ export default class MainPanel extends BaseUI {
             this.firstGuideTextOriginPos = new cc.Vec2(guideRoot.x, guideRoot.y);
         }
 
-        cc.tween(this.testip.node)
-            .repeatForever(
-                cc.tween().by(0.3,{scale:0.1}).by(0.3,{scale:-0.1})
-            )
-            .start();
+        if(this.testip && cc.isValid(this.testip.node)){
+            cc.Tween.stopAllByTarget(this.testip.node);
+            cc.tween(this.testip.node)
+                .repeatForever(
+                    cc.tween().by(0.3,{scale:0.1}).by(0.3,{scale:-0.1})
+                )
+                .start();
+        }
+    }
+
+    /**
+     * 清理 MainPanel 运行期缓存。
+     * 只清理界面临时状态，不改章节进度、玩家血量、每日次数等核心数据。
+     */
+    private clearRuntimeStateForPanelShow(){
+        this.unscheduleAllCallbacks();
+        this.selectedDicePoint = [];
+        this.selectedDice = [];
+        this.allDicesNodes = [];
+        this.allCharmItems = [];
+        this.calculateData = null!;
+        this.curDiceHandResult = null!;
+        this.monster = null!;
+        this.currentNodeData = null!;
+        this.battlleIn = false;
+        this.onRollling = false;
+        this.hasUsedFixedDicePoints = false;
+        this.firstGuideActive = false;
+        this.attackVisualPlaying = false;
+
+        let gamingContainer:cc.Node = this.node.getChildByName("GamingContainer");
+        if(!gamingContainer)return;
+
+        this.cacheSwordOrigin(gamingContainer.getChildByName("sword"));
+        this.restoreTotalAttackFocus();
+        this.restoreSwordOrigin();
+        this.setAttackBtnLocked(false);
+
+        // 重新进入 MainPanel 时，清掉上一轮可能残留的骰子、怪物和 Buff 节点。
+        for(let i = gamingContainer.children.length - 1; i >= 0; i--){
+            let child:cc.Node = gamingContainer.children[i];
+            if(child.getComponent(Dice) || child.getComponent(Monster)){
+                child.destroy();
+            }
+        }
+
+        let buffContainer:cc.Node = gamingContainer.getChildByName("buffContainer");
+        if(buffContainer){
+            buffContainer.destroyAllChildren();
+        }
     }
 
     private showCharmData(){
+        this.allCharmItems = [];
+        GameMain.extraPoint = 0;
+        GameMain.extraMultiple = 0;
+
+        let buffContainer:cc.Node = this.node.getChildByName("GamingContainer").getChildByName("buffContainer");
+        if(buffContainer){
+            buffContainer.destroyAllChildren();
+        }else{
+            console.error("buffContainer 节点不存在，无法显示道具状态");
+            return;
+        }
+
         for (let i = 0; i < GameMain.charmDatas.length; i++) {
             const c = GameMain.charmDatas[i];
             GameMain.instance.bundle.load("prefab/RewardItem", cc.Prefab, (err, prefab: cc.Prefab) => {
+                if(!this.node || !cc.isValid(this.node) || !buffContainer || !cc.isValid(buffContainer))return;
+                if(err || !prefab){
+                    console.error("奖励道具预制体加载失败:", err);
+                    return;
+                }
                 let newRewardItem: cc.Node = cc.instantiate(prefab);
                 this.allCharmItems.push(newRewardItem);
-                this.node.getChildByName("GamingContainer").getChildByName("buffContainer").addChild(newRewardItem);
+                buffContainer.addChild(newRewardItem);
                 newRewardItem.scale = 0.75;
                 newRewardItem.getComponent(RewardItem).setOnlyClick(c);
                 newRewardItem.y = 0;
@@ -168,7 +262,84 @@ export default class MainPanel extends BaseUI {
 
     private refreshCurStageLabel(){
         if(this.curStageLabel){
-            this.curStageLabel.string = `当前第${GameMain.instance.getChallengeStageScore()}关`;
+            this.curStageLabel.string = `第${GameMain.instance.getChallengeStageScore()}关`;
+        }
+    }
+
+    /**
+     * 隐藏关卡开场提示。
+     * 预制体里节点可以默认显示，运行时统一由代码控制显隐。
+     */
+    private hideStageStartTips(){
+        this.setStageTipNodeVisible(this.stageStartTipNode, false);
+        this.setStageTipNodeVisible(this.difficultyUpTipNode, false);
+    }
+
+    /**
+     * 播放进入战斗时的关卡提示。
+     * 只做显示和动效，不改变章节、怪物和骰子规则。
+     */
+    private playStageStartTips(){
+        let stageScore:number = GameMain.instance.getChallengeStageScore();
+        if(this.stageStartTipLabel){
+            this.stageStartTipLabel.string = `第${stageScore}关`;
+        }
+
+        if(this.shouldShowDifficultyUpTip(stageScore)){
+            if(this.difficultyUpTipLabel){
+                this.difficultyUpTipLabel.string = "难度飙升";
+            }
+            // 压力关先提示难度变化，再延迟显示当前关卡，避免两个提示抢主次。
+            this.playStageTipAnim(this.difficultyUpTipNode, 0);
+            this.playStageTipAnim(this.stageStartTipNode, 1.0);
+        }else{
+            this.setStageTipNodeVisible(this.difficultyUpTipNode, false);
+            this.playStageTipAnim(this.stageStartTipNode, 0);
+        }
+    }
+
+    /**
+     * 判断是否显示“难度飙升”。
+     * 第3关是首个压力点，第6关是中段压力点，第2章开始再次提醒。
+     */
+    private shouldShowDifficultyUpTip(stageScore:number):boolean{
+        return stageScore === 3 || stageScore === 6 || stageScore === 11;
+    }
+
+    /**
+     * 播放单个开场提示节点动画。
+     * 节点位置完全由预制体决定，代码只处理缩放和透明度。
+     */
+    private playStageTipAnim(tipNode:cc.Node, delayTime:number){
+        if(!tipNode || !cc.isValid(tipNode))return;
+
+        cc.Tween.stopAllByTarget(tipNode);
+        tipNode.active = true;
+        tipNode.opacity = 0;
+        tipNode.scale = 0.72;
+        cc.tween(tipNode)
+            .delay(delayTime)
+            .to(0.14, { opacity: 255, scale: 1.18 }, { easing: "backOut" })
+            .to(0.08, { scale: 1 })
+            .delay(0.55)
+            .to(0.18, { opacity: 0, scale: 0.92 })
+            .call(() => {
+                this.setStageTipNodeVisible(tipNode, false);
+            })
+            .start();
+    }
+
+    /**
+     * 设置开场提示节点显隐，并在隐藏时恢复基础显示状态。
+     */
+    private setStageTipNodeVisible(tipNode:cc.Node, show:boolean){
+        if(!tipNode || !cc.isValid(tipNode))return;
+
+        cc.Tween.stopAllByTarget(tipNode);
+        tipNode.active = show;
+        if(!show){
+            tipNode.opacity = 255;
+            tipNode.scale = 1;
         }
     }
 
@@ -212,11 +383,24 @@ export default class MainPanel extends BaseUI {
     }
 
     private refreshAllCharmItems(){
-        for (let i = 0; i < this.allCharmItems.length; i++){
-            this.allCharmItems[i].getComponent(RewardItem).charmData.useCount--;
-            if (this.allCharmItems[i].getComponent(RewardItem).charmData.useCount == 0) {
-                GameMain.charmDatas.splice(i, 1);
-                this.allCharmItems[i].destroy();
+        // 倒序移除，避免 splice 后跳过下一个道具。
+        for (let i = this.allCharmItems.length - 1; i >= 0; i--){
+            let charmNode:cc.Node = this.allCharmItems[i];
+            if(!charmNode || !cc.isValid(charmNode)){
+                this.allCharmItems.splice(i,1);
+                continue;
+            }
+
+            let rewardItem:RewardItem = charmNode.getComponent(RewardItem);
+            if(!rewardItem || !rewardItem.charmData)continue;
+
+            rewardItem.charmData.useCount--;
+            if (rewardItem.charmData.useCount <= 0) {
+                let saveIndex:number = GameMain.charmDatas.indexOf(rewardItem.charmData);
+                if(saveIndex >= 0){
+                    GameMain.charmDatas.splice(saveIndex, 1);
+                }
+                charmNode.destroy();
                 this.allCharmItems.splice(i,1);
             }
         }
@@ -234,7 +418,7 @@ export default class MainPanel extends BaseUI {
      */
     onReRoll(){
         if(GameMain.gameFinished){
-            UIManager.getInstance().openUI(TipPanel, 0, (ui: TipPanel) => {
+            UIManager.getInstance().openUI(TipPanel, GameMain.TIP_UI_Z_ORDER, (ui: TipPanel) => {
                 ui.onShow();
                 ui.showTip("当前战斗已结束",null)
             })
@@ -253,7 +437,7 @@ export default class MainPanel extends BaseUI {
         if(this.attackBtnLocked)return;
 
         if(this.selectedDice.length<=0){
-            UIManager.getInstance().openUI(TipPanel, 0, (ui: TipPanel) => {
+            UIManager.getInstance().openUI(TipPanel, GameMain.TIP_UI_Z_ORDER, (ui: TipPanel) => {
                 ui.onShow();
                 ui.showTip("请选择至少一个骰子",null)
             })
@@ -272,8 +456,9 @@ export default class MainPanel extends BaseUI {
             this.getGuideTipRoot().active = false;
         }
         let data = GetCalculateMultiple(this.curDiceHandResult.type);
-        let allPoint: number[] = this.curDiceHandResult.usedDicePoint;
-        let unusePoint: number[] = this.curDiceHandResult.unusedDicePoint;
+        // 拷贝一份参与计算的点数，避免后续选择状态变化影响本次结算。
+        let allPoint: number[] = this.curDiceHandResult.usedDicePoint.slice();
+        let unusePoint: number[] = this.curDiceHandResult.unusedDicePoint.slice();
         let totalPoint = data.totalPoints;
         let totalMul = data.totalMultiple;
 
@@ -291,10 +476,11 @@ export default class MainPanel extends BaseUI {
                 if (d.getComponent(Dice).finalIndex === element && !processedDice.has(d)) {
                     processedDice.add(d);
                     this.calculateData.totalPoints += element;
-                    this.loadTip(new cc.Vec2(d.x, d.y), element,cc.Color.WHITE,this.node);
+                    let diceTipPos:cc.Vec2 = this.getNodeTopTipPos(d, this.node, 25);
+                    this.loadTip(diceTipPos, element,cc.Color.WHITE,this.node);
                     if (d.getComponent(Dice).diceType === DiceType.fire) {
                         totalAttack += 3;
-                        this.loadTip(new cc.Vec2(d.x, d.y), 3,cc.Color.RED,this.node);
+                        this.loadTip(diceTipPos, 3,cc.Color.RED,this.node);
                     }
                     if(d.getComponent(Dice).diceType === DiceType.mult){
                         this.calculateData.totalMultiple += 1
@@ -319,15 +505,24 @@ export default class MainPanel extends BaseUI {
             this.refreshAllUIText(this.calculateData.totalPoints, this.calculateData.totalMultiple,totalAttack, () => {
                 let _sword = this.node.getChildByName("GamingContainer").getChildByName("sword")
                 let oldIndex = _sword.getSiblingIndex();
+                this.cacheSwordOrigin(_sword);
+                let swordAttackY:number = this.swordOriginPos.y + 482.3;
 
+                this.attackVisualPlaying = true;
+                this.hideHandWordForAttack();
+                this.hideSwordFeverForAttack();
                 _sword.setSiblingIndex(999)
-                // 宝剑攻击动画：先移动到y值为0的位置并放大1.5倍，再缩小到正常大小，延迟0.3秒后。逆时针旋转到-30度，然后再转到顺时针80度，最后再归0度。紧接着延迟0.3秒，移动回原来的位置并放大到1.5倍，再缩小到正常值
+                // 宝剑攻击动画：从当前编辑器位置出发，攻击结束后回到记录的位置，避免 UI 调整后被旧坐标拉偏。
                 cc.tween(_sword)
                     .parallel(
-                        cc.tween().to(0.25, { y: 274 }),
-                        cc.tween().to(0.25, { scale: 1.5})
+                        cc.tween().to(0.25, { y: swordAttackY }),
+                        cc.tween().to(0.25, { scale: this.swordOriginScale * 1.05})
                     )
-                    .to(0.15, { scale: 1.428})
+                    .call(() => {
+                        // 剑先飞出，再突出最终攻击力，顺序上更像“本次攻击已经打出去”。
+                        this.playTotalAttackFocus(this.calculateData.totalPoints * this.calculateData.totalMultiple + totalAttack);
+                    })
+                    .to(0.15, { scale: this.swordOriginScale})
                     .delay(0.4)
                     .to(0.15, { angle: -30 })
                     .to(0.15, { angle: 80 })
@@ -337,18 +532,19 @@ export default class MainPanel extends BaseUI {
                     .to(0.15, { angle: 0 })
                     .delay(0.3)
                     .parallel(
-                        cc.tween().to(0.15, { y: -208.3 }),
-                        cc.tween().to(0.25, { scale: 1.5})
+                        cc.tween().to(0.15, { x: this.swordOriginPos.x, y: this.swordOriginPos.y }),
+                        cc.tween().to(0.25, { scale: this.swordOriginScale * 1.05})
                     )
-                    .to(0.15, { scale: 1.428})
+                    .to(0.15, { scale: this.swordOriginScale})
                     .call(() => {
+                        _sword.setPosition(this.swordOriginPos);
+                        _sword.scale = this.swordOriginScale;
+                        _sword.angle = 0;
                         _sword.setSiblingIndex(oldIndex);
-                        if(this.monster.getCurHp() > 0){
+                        this.finishAttackUiAfterSwordBack();
+                        if(this.monster && this.monster.getCurHp() > 0){
                             this.monster.doAttackAction();
                         }
-                        this.NumPointsText.node.parent.active = true;
-                        this.NumMultipleText.node.parent.active = true;
-                        this.node.getChildByName("GamingContainer").getChildByName("x").active = true;
                     })
                     .start()
             }, false);
@@ -359,17 +555,42 @@ export default class MainPanel extends BaseUI {
     switchHandType(type:string){
         let _path = "arts/handwords/" + (type.toLowerCase());
         let handWordNode:cc.Node = this.node.getChildByName("GamingContainer").getChildByName("handwords");
+        handWordNode.active = true;
         cc.Tween.stopAllByTarget(handWordNode);
-        // 牌型成立时，艺术字原地弹一下，最后回到正常大小。
-        handWordNode.scale = 1;
+        // 牌型成立时，艺术字原地弹一下，最后回到稍大的基础尺寸，避免显示太憋屈。
+        let handWordBaseScale:number = 1.16;
+        handWordNode.scale = handWordBaseScale;
         cc.tween(handWordNode)
-            .to(0.12,{scale:1.28},{easing:"backOut"})
-            .to(0.08,{scale:0.94})
-            .to(0.08,{scale:1})
+            .to(0.12,{scale:handWordBaseScale * 1.28},{easing:"backOut"})
+            .to(0.08,{scale:handWordBaseScale * 0.94})
+            .to(0.08,{scale:handWordBaseScale})
             .start()
         GameMain.instance.bundle.load(_path, cc.SpriteFrame,(err,sp:cc.SpriteFrame)=>{
             handWordNode.getComponent(cc.Sprite).spriteFrame = sp;
         })
+    }
+
+    /**
+     * 剑出击后隐藏牌型艺术字。
+     * 牌型字用于选择反馈，进入攻击表现后应该让位给最终攻击力和剑动画。
+     */
+    private hideHandWordForAttack(){
+        let gamingContainer:cc.Node = this.node.getChildByName("GamingContainer");
+        if(!gamingContainer)return;
+
+        let handWordNode:cc.Node = gamingContainer.getChildByName("handwords");
+        if(!handWordNode || !cc.isValid(handWordNode))return;
+
+        cc.Tween.stopAllByTarget(handWordNode);
+        handWordNode.active = false;
+    }
+
+    /**
+     * 剑开始攻击后隐藏剑狂热特效。
+     * 攻击阶段的视觉重点交给宝剑、攻击按钮和可斩杀艺术字，避免特效抢主反馈。
+     */
+    private hideSwordFeverForAttack(){
+        this.setSwordFeverVisible(0);
     }
 
     playHandFormFeedback(){
@@ -498,6 +719,7 @@ export default class MainPanel extends BaseUI {
         let btnComp:cc.Button = this.btn_start.getComponent(cc.Button);
 
         if(locked){
+            this.unschedule(this.unlockAttackBtnWhenStuck);
             this.resetAttackBtnFeedback();
             this.btn_start.opacity = 120;
             this.btn_start.color = cc.color(120, 120, 120, 255);
@@ -505,12 +727,32 @@ export default class MainPanel extends BaseUI {
             if(btnComp){
                 btnComp.interactable = false;
             }
+            // 只防真正卡死：正常攻击结算远小于这个时间，不会干扰本地开发的正常延迟。
+            this.scheduleOnce(this.unlockAttackBtnWhenStuck, this.ATTACK_LOCK_TIMEOUT);
         }else{
+            this.unschedule(this.unlockAttackBtnWhenStuck);
             this.btn_start.resumeSystemEvents(true);
             if(btnComp){
                 btnComp.interactable = true;
             }
         }
+    }
+
+    /**
+     * 攻击结算异常卡住时自动恢复按钮。
+     * 正常流程会主动解锁，这里只作为长时间无响应的兜底。
+     */
+    private unlockAttackBtnWhenStuck(){
+        if(!this.attackBtnLocked || GameMain.gameFinished)return;
+
+        this.attackBtnLocked = false;
+        this.battlleIn = false;
+        this.onRollling = false;
+        this.attackVisualPlaying = false;
+        this.restoreTotalAttackFocus();
+        this.restoreSwordOrigin();
+        this.refreshAttackBtnState(false);
+        GameMain.instance.showTip("攻击结算异常，已恢复操作");
     }
 
     /**
@@ -581,7 +823,10 @@ export default class MainPanel extends BaseUI {
             const point = d.getComponent(Dice).finalIndex;// 已选择的那个骰子的点数
             if(allPoint.includes(point)){// 已选择的那个骰子的点数是否在已参与战斗的骰子点数列表中
                 d.destroy();
-                this.allDicesNodes.splice(this.allDicesNodes.indexOf(d),1)// 移除这个骰子
+                let diceIndex:number = this.allDicesNodes.indexOf(d);
+                if(diceIndex >= 0){
+                    this.allDicesNodes.splice(diceIndex,1)// 移除这个骰子
+                }
             }else {
                 d.getComponent(Dice).setDeSelected();
             }
@@ -592,15 +837,13 @@ export default class MainPanel extends BaseUI {
         this.selectedDice=[];
         this.curDiceHandResult = null!;
         this.calculateData = null!;
-        this.setAttackBtnLocked(false);
-        this.refreshAttackBtnState(false);
-        this.refreshAllUIText(0, 0, 0, null, true);
         this.refreshBattleWarningEffects();
         this.refreshAllCharmItems();// 移除底部所有已使用的charm
         this.unusePointCount = 5 - this.allDicesNodes.length;
-        this.battlleIn = false;
-        this.onRollling = false;
         this.node.getChildByName("GamingContainer").getChildByName("handwords").getComponent(cc.Sprite).spriteFrame = null!;
+        if(!this.attackVisualPlaying){
+            this.finishAttackUiAfterSwordBack();
+        }
     }
 
     /**
@@ -634,7 +877,16 @@ export default class MainPanel extends BaseUI {
     }
 
     loadData(){
+        this.allMonsterDatas = [];
+        this.allCharmDatas = [];
         GameMain.instance.bundle.load("datas/monster", cc.JsonAsset, (err, json) => {
+            if(!this.node || !cc.isValid(this.node))return;
+            if(err || !json || !json.json || !json.json.monster){
+                console.error("怪物数据加载失败:", err);
+                GameMain.instance.showTip("怪物数据加载失败，请稍后重试");
+                return;
+            }
+
             let _json = json.json;
             for (let i = 0; i < _json.monster.length; i++) {
                 let permonsterData = _json.monster[i];
@@ -654,6 +906,13 @@ export default class MainPanel extends BaseUI {
             }
         })
         GameMain.instance.bundle.load("datas/charm", cc.JsonAsset, (err, json) => {
+            if(!this.node || !cc.isValid(this.node))return;
+            if(err || !json || !json.json || !json.json.charms){
+                console.error("道具数据加载失败:", err);
+                GameMain.instance.showTip("道具数据加载失败，部分奖励暂不可用");
+                return;
+            }
+
             let _json = json.json;
             for (let i = 0; i < _json.charms.length; i++) {
                 let percharmData = _json.charms[i];
@@ -673,9 +932,18 @@ export default class MainPanel extends BaseUI {
     }
 
     loadDices(dTypes:DiceType[]) {
+        if(!dTypes || dTypes.length <= 0){
+            this.onRollling = false;
+            GameMain.instance.showTip("骰子数据为空，请重新进入");
+            return;
+        }
+
         GameMain.instance.bundle.load("prefab/dice", cc.Prefab, (err, prefab: cc.Prefab) => {
-            if (err) {
-                console.error("load itemCell prefab error:", err);
+            if(!this.node || !cc.isValid(this.node))return;
+            if (err || !prefab) {
+                console.error("骰子预制体加载失败:", err);
+                this.onRollling = false;
+                GameMain.instance.showTip("骰子加载失败，请重试");
                 return;
             }
             let oldPoionts: cc.Vec2[] = []
@@ -694,6 +962,12 @@ export default class MainPanel extends BaseUI {
                 300,
                 oldPoionts
             );
+            if(this.unusePointCount > 0 && points.length <= 0){
+                this.onRollling = false;
+                GameMain.instance.showTip("骰子落点生成失败，请重试");
+                return;
+            }
+
             for (let i = 0; i < Math.min(this.unusePointCount, points.length); i++) {
                 let btn_openDicePackagePos = this.node.getChildByName("GamingContainer").getChildByName("btn_openDicePackage");
                 // 固定点数要在tween回调前先取好，否则标记位提前变化会导致首轮也变随机
@@ -882,10 +1156,25 @@ export default class MainPanel extends BaseUI {
     openBattle(nodeData:Chapter){
         this.currentNodeData = nodeData;
         this.hasUsedFixedDicePoints = false;
+        // 进入新战斗先清掉上一关的危险提示，等新怪物加载完成后再按当前怪物重新判断。
+        this.setLoopEffectVisible(this.lowHpWarningNode, false, "lowHp");
+        this.playStageStartTips();
         GameMain.instance.bundle.load("prefab/monster", cc.Prefab, (err, prefab: cc.Prefab) => {
+            if(err || !prefab){
+                console.error("怪物预制体加载失败:", err);
+                GameMain.instance.showTip("怪物加载失败，请重新选择");
+                return;
+            }
+
+            let md: MonsterData = this.allMonsterDatas[nodeData.eventData.monsterIds];
+            if(!md){
+                console.error("怪物数据不存在:", nodeData.eventData.monsterIds);
+                GameMain.instance.showTip("怪物配置异常，请重新选择");
+                return;
+            }
+
             let newMonster: cc.Node = cc.instantiate(prefab);
             this.node.getChildByName("GamingContainer").addChild(newMonster);
-            let md: MonsterData = this.allMonsterDatas[nodeData.eventData.monsterIds]
             newMonster.getComponent(Monster).init(md);
             this.monster = newMonster.getComponent(Monster);
             this.refreshBattleWarningEffects();
@@ -926,15 +1215,34 @@ export default class MainPanel extends BaseUI {
 
     loadTip(pos:cc.Vec2,num:number,_color:cc.Color,parent:cc.Node){
         GameMain.instance.bundle.load("prefab/tip", cc.Prefab,(err,prefab:cc.Prefab)=>{
+            if(err || !prefab){
+                console.error("战斗飘字预制体加载失败:", err);
+                return;
+            }
+
             let newTip: cc.Node = cc.instantiate(prefab);
             parent.addChild(newTip);
             newTip.getComponent(Tip).init(pos,num,_color);
         })
     }
 
+    /**
+     * 获取某个节点顶部的飘字坐标。
+     * target 和 parent 可能不在同一个父节点下，所以这里统一做世界坐标转换。
+     */
+    private getNodeTopTipPos(target:cc.Node, parent:cc.Node, yOffset:number = 0):cc.Vec2{
+        if(!target || !target.parent || !parent)return cc.v2(0,0);
+
+        let worldPos:cc.Vec2 = target.parent.convertToWorldSpaceAR(target.position);
+        let localPos:cc.Vec2 = parent.convertToNodeSpaceAR(worldPos);
+        localPos.y += yOffset;
+        return localPos;
+    }
+
     refreshAllUIText(p: number, m: number, totalAttack: number = 0, callBack: any = null, immediate: boolean = true) {
         this.calculateData = new CalculateData(p, m);
         if (immediate) {
+            this.restoreTotalAttackFocus(!this.attackVisualPlaying);
             this.NumPointsText.string = p.toString();
             this.NumMultipleText.string = m.toString();
             this.TotalText.string = (p * m + totalAttack).toString();
@@ -959,7 +1267,7 @@ export default class MainPanel extends BaseUI {
                                 this.refreshBattleWarningEffects();
                                 this.NumPointsText.node.parent.active = false;
                                 this.NumMultipleText.node.parent.active = false;
-                                this.node.getChildByName("GamingContainer").getChildByName("x").active = false;
+                                this.setFormulaSymbolsVisible(false);
                                 setTimeout(() => {
                                     if (callBack != null && callBack != undefined) {
                                         callBack()
@@ -974,7 +1282,7 @@ export default class MainPanel extends BaseUI {
                             this.refreshBattleWarningEffects();
                             this.NumPointsText.node.parent.active = false;
                             this.NumMultipleText.node.parent.active = false;
-                            this.node.getChildByName("GamingContainer").getChildByName("x").active = false;
+                            this.setFormulaSymbolsVisible(false);
                             setTimeout(() => {
                                 if (callBack != null && callBack != undefined) {
                                     callBack()
@@ -985,6 +1293,201 @@ export default class MainPanel extends BaseUI {
                 }, 500);
             }, 500);
         }
+    }
+
+    /**
+     * 攻击结算阶段突出最终攻击力。
+     * 点数和倍数隐藏后，将 txt_total 改成“攻击力：数值”，再按文本真实宽度横向居中。
+     */
+    private playTotalAttackFocus(finalAttack:number){
+        if(!this.TotalText || !this.TotalText.node || !cc.isValid(this.TotalText.node))return;
+
+        let totalNode:cc.Node = this.TotalText.node;
+        this.cacheTotalTextOrigin();
+        this.TotalText.string = `攻击力：${finalAttack}`;
+        let targetScale:number = this.totalTextOriginScale * this.getTotalAttackFocusScale(finalAttack);
+        let textWidth:number = this.getEstimatedLabelTextWidth(this.TotalText);
+        // SHRINK 会受节点宽度限制，聚焦显示时临时扩宽，避免“攻击力：xx”被压成两行。
+        totalNode.width = Math.max(this.totalTextOriginWidth, textWidth + 30);
+        this.forceUpdateLabelRender(this.TotalText);
+
+        let gamingContainer:cc.Node = this.node.getChildByName("GamingContainer");
+        if(!gamingContainer || !totalNode.parent)return;
+
+        let totalWorldPos:cc.Vec2 = totalNode.parent.convertToWorldSpaceAR(totalNode.position);
+        let gamingCenterWorldPos:cc.Vec2 = gamingContainer.convertToWorldSpaceAR(cc.v2(0, 0));
+        let centerLocalPos:cc.Vec2 = totalNode.parent.convertToNodeSpaceAR(cc.v2(gamingCenterWorldPos.x, totalWorldPos.y));
+        let targetX:number = this.getLeftAlignLabelCenterX(this.TotalText, centerLocalPos.x, targetScale, textWidth);
+
+        cc.Tween.stopAllByTarget(totalNode);
+        cc.tween(totalNode)
+            .to(0.16, { x: targetX, scale: targetScale }, { easing: "backOut" })
+            .start();
+    }
+
+    /**
+     * 根据最终攻击力决定聚焦文字大小。
+     * 只影响攻击表现，不改变真实伤害数值。
+     */
+    private getTotalAttackFocusScale(finalAttack:number):number{
+        if(finalAttack >= 80)return 2;
+        if(finalAttack >= 40)return 1.5;
+        return 1;
+    }
+
+    /**
+     * 计算左对齐 Label 居中时的节点 x。
+     * txt_total 是左对齐文本，节点坐标不等于文本视觉中心，所以需要按文本宽度修正。
+     */
+    private getLeftAlignLabelCenterX(label:cc.Label, centerX:number, targetScale:number, textWidth:number = -1):number{
+        if(!label || !label.node)return centerX;
+
+        if(textWidth <= 0){
+            textWidth = this.getEstimatedLabelTextWidth(label);
+        }
+        let anchorOffsetX:number = (0.5 - label.node.anchorX) * textWidth * targetScale;
+        return centerX - anchorOffsetX;
+    }
+
+    /**
+     * 估算 Label 当前文本宽度。
+     * txt_total 使用 SHRINK 时节点宽度不等于文本宽度，所以这里按字符估算并用于动态扩宽。
+     */
+    private getEstimatedLabelTextWidth(label:cc.Label):number{
+        let estimatedWidth:number = 0;
+        let fontSize:number = label.fontSize || 32;
+        let text:string = label.string || "";
+        for(let i = 0; i < text.length; i++){
+            let code:number = text.charCodeAt(i);
+            estimatedWidth += code <= 255 ? fontSize * 0.58 : fontSize;
+        }
+        return Math.max(estimatedWidth, 1);
+    }
+
+    /**
+     * 主动刷新 Label 渲染数据。
+     * Cocos 2.x 修改 string 后节点宽度可能下一帧才更新，这里用于立即计算居中位置。
+     */
+    private forceUpdateLabelRender(label:cc.Label){
+        if(!label)return;
+
+        let anyLabel:any = label as any;
+        if(anyLabel._forceUpdateRenderData){
+            anyLabel._forceUpdateRenderData(true);
+        }
+    }
+
+    /**
+     * 恢复最终攻击力文本的原始位置和大小。
+     * 剑回到原位、重新打开界面、异常恢复时都会调用，避免 UI 状态残留。
+     */
+    private restoreTotalAttackFocus(restoreFormula:boolean = true){
+        if(!this.TotalText || !this.TotalText.node || !cc.isValid(this.TotalText.node))return;
+
+        let totalNode:cc.Node = this.TotalText.node;
+        if(!this.totalTextOriginPos || this.totalTextOriginScale === null){
+            this.cacheTotalTextOrigin();
+            if(restoreFormula){
+                this.setFormulaSymbolsVisible(true);
+            }
+            return;
+        }
+
+        cc.Tween.stopAllByTarget(totalNode);
+        totalNode.setPosition(this.totalTextOriginPos);
+        totalNode.scale = this.totalTextOriginScale;
+        totalNode.width = this.totalTextOriginWidth;
+        if(restoreFormula){
+            this.setFormulaSymbolsVisible(true);
+        }
+    }
+
+    /**
+     * 缓存 txt_total 初始状态。
+     * 只记录一次，后续所有攻击表现都回到这个位置和缩放。
+     */
+    private cacheTotalTextOrigin(){
+        if(!this.TotalText || !this.TotalText.node || !cc.isValid(this.TotalText.node))return;
+        if(!this.totalTextOriginPos){
+            this.totalTextOriginPos = new cc.Vec2(this.TotalText.node.x, this.TotalText.node.y);
+        }
+        if(this.totalTextOriginScale === null){
+            this.totalTextOriginScale = this.TotalText.node.scale;
+        }
+        if(this.totalTextOriginWidth === null){
+            this.totalTextOriginWidth = this.TotalText.node.width;
+        }
+    }
+
+    /**
+     * 控制公式符号显隐。
+     * 攻击结算阶段隐藏 x 和 =，让最终攻击力成为唯一视觉重点。
+     */
+    private setFormulaSymbolsVisible(show:boolean){
+        let gamingContainer:cc.Node = this.node.getChildByName("GamingContainer");
+        if(!gamingContainer)return;
+
+        let xNode:cc.Node = gamingContainer.getChildByName("x");
+        let equalNode:cc.Node = gamingContainer.getChildByName("=");
+        if(xNode)xNode.active = show;
+        if(equalNode)equalNode.active = show;
+    }
+
+    /**
+     * 剑回到初始位置后，统一恢复攻击公式区域。
+     * 这样 x、=、点数、倍数不会在怪物受击或血条刷新时提前显示。
+     */
+    private finishAttackUiAfterSwordBack(){
+        this.attackVisualPlaying = false;
+        this.battlleIn = false;
+        this.onRollling = false;
+        this.refreshAllUIText(0, 0, 0, null, true);
+
+        if(this.NumPointsText && this.NumPointsText.node && this.NumPointsText.node.parent){
+            this.NumPointsText.node.parent.active = true;
+        }
+        if(this.NumMultipleText && this.NumMultipleText.node && this.NumMultipleText.node.parent){
+            this.NumMultipleText.node.parent.active = true;
+        }
+
+        this.setFormulaSymbolsVisible(true);
+        this.restoreTotalAttackFocus(true);
+        this.setAttackBtnLocked(false);
+        this.refreshAttackBtnState(false);
+    }
+
+    /**
+     * 缓存宝剑的编辑器初始位置。
+     * 攻击动画结束必须回到这个位置，不能再使用旧版写死坐标。
+     */
+    private cacheSwordOrigin(swordNode:cc.Node){
+        if(!swordNode || !cc.isValid(swordNode))return;
+
+        if(!this.swordOriginPos){
+            this.swordOriginPos = new cc.Vec2(swordNode.x, swordNode.y);
+        }
+        if(this.swordOriginScale === null){
+            this.swordOriginScale = swordNode.scale;
+        }
+    }
+
+    /**
+     * 恢复宝剑到编辑器初始位置。
+     * 用于重新打开界面或攻击异常恢复，避免上一段动画状态残留。
+     */
+    private restoreSwordOrigin(){
+        if(!this.swordOriginPos || this.swordOriginScale === null)return;
+
+        let gamingContainer:cc.Node = this.node.getChildByName("GamingContainer");
+        if(!gamingContainer)return;
+
+        let swordNode:cc.Node = gamingContainer.getChildByName("sword");
+        if(!swordNode || !cc.isValid(swordNode))return;
+
+        cc.Tween.stopAllByTarget(swordNode);
+        swordNode.setPosition(this.swordOriginPos);
+        swordNode.scale = this.swordOriginScale;
+        swordNode.angle = 0;
     }
 
     nodeScale(target:cc.Node,callBack:any = null){
@@ -1002,6 +1505,7 @@ export default class MainPanel extends BaseUI {
     refreshBattleWarningEffects(){
         this.refreshKillReadyEffect();
         this.refreshLowHpWarningEffect();
+        this.refreshSwordFeverEffect();
     }
 
     private hideBattleWarningEffects(){
@@ -1009,6 +1513,20 @@ export default class MainPanel extends BaseUI {
         this.setKillReadyWordVisible(false);
         this.setAttackBtnKillReadyAnim(false);
         this.setLoopEffectVisible(this.lowHpWarningNode, false, "lowHp");
+        this.setSwordFeverVisible(0);
+    }
+
+    /**
+     * 给剑狂热特效应用流光材质。
+     * 材质只影响 swordFeverEffectNode 自己，不改剑图片和真实攻击逻辑。
+     */
+    private applySwordFeverMaterial(){
+        if(!this.swordFeverEffectNode || !cc.isValid(this.swordFeverEffectNode) || !this.swordFeverMaterial)return;
+
+        let sprite:cc.Sprite = this.swordFeverEffectNode.getComponent(cc.Sprite);
+        if(!sprite)return;
+
+        sprite.setMaterial(0, this.swordFeverMaterial);
     }
 
     private refreshKillReadyEffect(){
@@ -1025,6 +1543,125 @@ export default class MainPanel extends BaseUI {
         if(this.monster){
             this.monster.refreshKillReadyFeedback(show);
         }
+    }
+
+    /**
+     * 刷新剑狂热特效。
+     * 只读取当前牌型和预览攻击力，不参与真实伤害结算。
+     */
+    private refreshSwordFeverEffect(){
+        let feverLevel:number = this.getSwordFeverLevel();
+        this.setSwordFeverVisible(feverLevel);
+    }
+
+    /**
+     * 根据牌型、预览攻击力、是否可斩杀综合计算剑狂热等级。
+     * 0 不显示，1 轻微狂热，2 明显狂热，3 最高狂热。
+     */
+    private getSwordFeverLevel():number{
+        if(GameMain.gameFinished || !this.monster || !this.curDiceHandResult || this.curDiceHandResult.type <= DiceHandType.None || this.selectedDice.length <= 0){
+            return 0;
+        }
+
+        let previewAttack:number = this.getPreviewFinalAttack();
+        let feverLevel:number = 0;
+
+        if(this.curDiceHandResult.type >= DiceHandType.Three){
+            feverLevel = 1;
+        }
+        if(this.curDiceHandResult.type >= DiceHandType.Four){
+            feverLevel = 2;
+        }
+        if(this.curDiceHandResult.type >= DiceHandType.Straight){
+            feverLevel = 3;
+        }
+
+        if(previewAttack >= 40){
+            feverLevel = Math.max(feverLevel, 1);
+        }
+        if(previewAttack >= 65){
+            feverLevel = Math.max(feverLevel, 2);
+        }
+        if(previewAttack >= 90 || this.monster.canBeKilledByAttack(previewAttack)){
+            feverLevel = Math.max(feverLevel, 3);
+        }
+
+        return feverLevel;
+    }
+
+    /**
+     * 控制剑狂热特效显隐和循环流光。
+     * 建议节点挂在 sword 下面，这样剑攻击时火焰会跟着剑一起移动。
+     */
+    private setSwordFeverVisible(level:number){
+        if(!this.swordFeverEffectNode || !cc.isValid(this.swordFeverEffectNode))return;
+
+        this.applySwordFeverMaterial();
+
+        if(this.swordFeverOriginScale === null){
+            this.swordFeverOriginScale = this.swordFeverEffectNode.scale;
+        }
+        if(this.swordFeverOriginOpacity === null){
+            this.swordFeverOriginOpacity = this.swordFeverEffectNode.opacity;
+        }
+
+        if(level <= 0){
+            this.swordFeverLevel = 0;
+            cc.Tween.stopAllByTarget(this.swordFeverEffectNode);
+            this.swordFeverEffectNode.active = false;
+            this.swordFeverEffectNode.angle = 0;
+            this.swordFeverEffectNode.scale = this.swordFeverOriginScale;
+            this.swordFeverEffectNode.opacity = this.swordFeverOriginOpacity;
+            return;
+        }
+
+        if(this.swordFeverEffectNode.active && this.swordFeverLevel === level)return;
+
+        this.swordFeverLevel = level;
+        this.swordFeverEffectNode.active = true;
+        this.swordFeverEffectNode.zIndex = -1;
+        this.updateSwordFeverMaterialParams(level);
+        this.playSwordFeverLoopAnim(level);
+    }
+
+    /**
+     * 更新剑狂热材质参数。
+     * 等级越高，内部流光速度和亮度越明显，但节点本身不旋转。
+     */
+    private updateSwordFeverMaterialParams(level:number){
+        if(!this.swordFeverMaterial)return;
+
+        let flowStrength:number = level === 3 ? 1.35 : (level === 2 ? 1.12 : 0.88);
+        let lightStrength:number = level === 3 ? 0.95 : (level === 2 ? 0.78 : 0.58);
+        let flowSpeed:number = level === 3 ? 1.65 : (level === 2 ? 1.35 : 1.05);
+        this.swordFeverMaterial.setProperty("flowParams", cc.v4(flowStrength, lightStrength, flowSpeed, 0));
+    }
+
+    /**
+     * 播放剑狂热循环表现。
+     * 这里只做轻微呼吸和透明度变化，流动旋转交给 shader 内部完成。
+     */
+    private playSwordFeverLoopAnim(level:number){
+        if(!this.swordFeverEffectNode || !cc.isValid(this.swordFeverEffectNode))return;
+
+        let originScale:number = this.swordFeverOriginScale !== null ? this.swordFeverOriginScale : this.swordFeverEffectNode.scale;
+        // 只弱化循环缩放幅度，透明度波动和 shader 流光保持原来的表现。
+        let maxScale:number = originScale * (level === 3 ? 1.035 : (level === 2 ? 1.025 : 1.015));
+        let minOpacity:number = level === 3 ? 210 : (level === 2 ? 175 : 135);
+        let maxOpacity:number = level === 3 ? 255 : (level === 2 ? 225 : 185);
+
+        cc.Tween.stopAllByTarget(this.swordFeverEffectNode);
+        this.swordFeverEffectNode.angle = 0;
+        this.swordFeverEffectNode.scale = originScale;
+        this.swordFeverEffectNode.opacity = maxOpacity;
+
+        cc.tween(this.swordFeverEffectNode)
+            .repeatForever(
+                cc.tween()
+                    .to(0.22, { scale: maxScale, opacity: maxOpacity })
+                    .to(0.28, { scale: originScale, opacity: minOpacity })
+            )
+            .start();
     }
 
     /**
@@ -1112,8 +1749,10 @@ export default class MainPanel extends BaseUI {
         if(!this.lowHpWarningNode)return;
 
         let show:boolean = false;
-        if(GameMain.instance && GameMain.instance.player && GameMain.instance.player.totalHp > 0){
-            show = !GameMain.gameFinished && GameMain.instance.player.curHP > 0 && GameMain.instance.player.curHP <= GameMain.instance.player.totalHp * 0.3;
+        if(GameMain.instance && GameMain.instance.player && this.monster){
+            let curHp:number = GameMain.instance.player.curHP;
+            // 这个特效表示“当前怪物下一击会致死”，不再单纯按低血量显示，避免换关后误提示。
+            show = !GameMain.gameFinished && curHp > 0 && this.monster.getCurAttack() >= curHp;
         }
 
         this.setLoopEffectVisible(this.lowHpWarningNode, show, "lowHp");
@@ -1164,8 +1803,10 @@ export default class MainPanel extends BaseUI {
 
     override onDestroy(): void {
         // this.btn_onRoll.off(cc.Node.EventType.TOUCH_END,this.onReRoll,this)
+        this.unscheduleAllCallbacks();
         this.setAttackBtnLocked(false);
         this.refreshAttackBtnState(true);
+        MainPanel.instance = null!;
         if(this.killReadyEffectNode && cc.isValid(this.killReadyEffectNode)){
             cc.Tween.stopAllByTarget(this.killReadyEffectNode);
         }
@@ -1175,8 +1816,20 @@ export default class MainPanel extends BaseUI {
         if(this.lowHpWarningNode && cc.isValid(this.lowHpWarningNode)){
             cc.Tween.stopAllByTarget(this.lowHpWarningNode);
         }
+        if(this.swordFeverEffectNode && cc.isValid(this.swordFeverEffectNode)){
+            cc.Tween.stopAllByTarget(this.swordFeverEffectNode);
+        }
+        if(this.testip && cc.isValid(this.testip.node)){
+            cc.Tween.stopAllByTarget(this.testip.node);
+        }
+        this.hideStageStartTips();
+        this.hideBattleWarningEffects();
         this.btn_start.off(cc.Node.EventType.TOUCH_END,this.onStartBattle,this)
         this.btn_openDicePackage.off(cc.Node.EventType.TOUCH_END,this.onOpenBagPanel,this)
         this.calculateData = null!;
+        this.selectedDicePoint = [];
+        this.selectedDice = [];
+        this.allDicesNodes = [];
+        this.allCharmItems = [];
     }
 }

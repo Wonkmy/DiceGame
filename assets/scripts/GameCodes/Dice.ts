@@ -72,12 +72,20 @@ export default class Dice extends cc.Component {
                 let sprite: cc.Sprite = this.node.getChildByName("view").getComponent(cc.Sprite);
                 sprite.spriteFrame = sf;
             })
-            MainPanel.instance.selectedDicePoint.splice(MainPanel.instance.selectedDicePoint.indexOf(this.finalIndex), 1);
-            MainPanel.instance.selectedDice.splice(MainPanel.instance.selectedDice.indexOf(this.node),1);
+            // 取消选择时只移除真实存在的下标，避免状态不同步时误删数组最后一项。
+            let pointIndex:number = MainPanel.instance.selectedDicePoint.indexOf(this.finalIndex);
+            if(pointIndex >= 0){
+                MainPanel.instance.selectedDicePoint.splice(pointIndex, 1);
+            }
+
+            let nodeIndex:number = MainPanel.instance.selectedDice.indexOf(this.node);
+            if(nodeIndex >= 0){
+                MainPanel.instance.selectedDice.splice(nodeIndex,1);
+            }
         }
 
         MainPanel.instance.curDiceHandResult = getDiceHandResult(MainPanel.instance.selectedDicePoint);
-        console.log("当前选择的点数型是:" + GetTypeNameByType(MainPanel.instance.curDiceHandResult.type));
+        // console.log("当前选择的点数型是:" + GetTypeNameByType(MainPanel.instance.curDiceHandResult.type));
         MainPanel.instance.refreshFirstGuideAfterSelect();
         let _type = MainPanel.instance.curDiceHandResult.type;
         MainPanel.instance.switchHandType(DiceHandType[_type]);
