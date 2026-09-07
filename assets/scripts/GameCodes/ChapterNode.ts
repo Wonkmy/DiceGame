@@ -6,6 +6,7 @@
 //  - https://docs.cocos.com/creator/2.4/manual/en/scripting/life-cycle-callbacks.html
 
 import { Chapter } from "../Global/DiceHandUtil";
+import GameMain from "../GameMain";
 import ChapterPanel from "../Panels/ChapterPanel";
 import MainPanel from "../Panels/MainPanel";
 import { UIManager } from "../UIManager/UIManager";
@@ -25,6 +26,12 @@ export default class ChapterNode extends cc.Component {
     }
 
     private onEnterChapterStage() {
+        if(!this.nodeData){
+            // 真机资源加载异常时，避免未初始化的卡片点击后直接报错卡死。
+            GameMain.instance.showTip("关卡数据加载中，请稍后再试");
+            return;
+        }
+
         cc.Tween.stopAllByTarget(this.node);
         this.node.scale = this.originScale;
         if (this.nodeData.type === "battle" || this.nodeData.type === "elite" || this.nodeData.type === "boss") {

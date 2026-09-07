@@ -39,6 +39,7 @@ export default class GameMain extends cc.Component {
     // 如果有道具或者三选一的功能是改变点数和倍率的，直接使用这两个
     static extraPoint:number = 0;
     static extraMultiple:number = 0;
+    static extraDamageRate:number = 0;// 下次攻击最终伤害百分比加成，来自轻量事件节点
     static charmDatas:CharmData[]=[]
 
     protected onLoad(): void {
@@ -105,6 +106,7 @@ export default class GameMain extends cc.Component {
         GameMain.curWinStreak = 0;
         GameMain.extraPoint = 0;
         GameMain.extraMultiple = 0;
+        GameMain.extraDamageRate = 0;
         // 当前版本先弱化构筑，重开一局时清掉临时Charm。
         GameMain.charmDatas = [];
         DiceGameSave.resetCurrentGame();
@@ -119,6 +121,7 @@ export default class GameMain extends cc.Component {
         GameMain.curWinStreak = 0;
         GameMain.extraPoint = 0;
         GameMain.extraMultiple = 0;
+        GameMain.extraDamageRate = 0;
         GameMain.charmDatas = [];
         DiceGameSave.resetCurrentGame();
     }

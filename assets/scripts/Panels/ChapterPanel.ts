@@ -55,7 +55,7 @@ export default class ChapterPanel extends BaseUI {
                         newChapterNode.getChildByName("view").getComponent(cc.Sprite).spriteFrame = sp;
                     })
                 }else{
-                    this.setChapterNodeText(newChapterNode, nodeData.type + "\n点击进入");
+                    this.setChapterNodeText(newChapterNode, `${this.getEventShowName(nodeData.type)}\n点击领取`);
                 }
                 newChapterNode.getComponent(ChapterNode).init(nodeData);
             })
@@ -72,6 +72,17 @@ export default class ChapterPanel extends BaseUI {
         }
 
         return String(gameCapter.chapterName);
+    }
+
+    /**
+     * 获取事件节点显示名。
+     * 旧的 shop 类型不再显示“商店”，避免玩家误以为会进入商店界面。
+     */
+    private getEventShowName(type:string):string{
+        if(type === "shop")return "铸骰台";
+        if(type === "rest")return "休息点";
+        if(type === "treasure")return "宝箱";
+        return "补给";
     }
 
     /**

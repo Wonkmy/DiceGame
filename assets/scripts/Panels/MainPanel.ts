@@ -19,6 +19,14 @@ import DebugTool from "../GameCodes/DebugTool";
 
 const {ccclass, property} = cc._decorator;
 
+type LightEventReward = {
+    name:string;
+    desc:string;
+    effect:string;
+    value:number;
+    unlockStage:number;
+}
+
 @ccclass
 export default class MainPanel extends BaseUI {
     public static instance:MainPanel = null!;
@@ -87,6 +95,10 @@ export default class MainPanel extends BaseUI {
     NumMultipleText:cc.Label= null!;
     @property({type:cc.Label})
     TotalText:cc.Label= null!;
+
+    @property({type:cc.Label, displayName:"护盾抵消文本", tooltip:"怪物有护盾时显示，例如：护盾抵消 -2。不拖拽则不显示"})
+    shieldDamageLabel:cc.Label = null!;
+
     @property({type:cc.Label})
     testip:cc.Label= null!;
 
@@ -134,7 +146,24 @@ export default class MainPanel extends BaseUI {
     private swordFeverOriginScale:number = null!;
     private swordFeverOriginOpacity:number = null!;
     private swordFeverLevel:number = 0;
+    private monsterDataLoaded:boolean = false;
+    private waitingLoadChapter:boolean = false;
     private readonly ATTACK_LOCK_TIMEOUT:number = 8;
+    private readonly forgeRewards:LightEventReward[] = [
+        { name:"擦亮剑锋", desc:"下次攻击点数 +6", effect:"point", value:6, unlockStage:1 },
+        { name:"淬一口火", desc:"下次攻击点数 +8", effect:"point", value:8, unlockStage:5 },
+        { name:"骰火开刃", desc:"下次攻击点数 +10", effect:"point", value:10, unlockStage:11 },
+    ];
+    private readonly treasureRewards:LightEventReward[] = [
+        { name:"小宝箱", desc:"下次最终伤害 +8%", effect:"damageRate", value:0.08, unlockStage:1 },
+        { name:"亮晶宝箱", desc:"下次最终伤害 +10%", effect:"damageRate", value:0.1, unlockStage:5 },
+        { name:"深渊宝箱", desc:"下次最终伤害 +12%", effect:"damageRate", value:0.12, unlockStage:11 },
+    ];
+    private readonly restRewards:LightEventReward[] = [
+        { name:"短暂休整", desc:"恢复已损失生命 30%", effect:"healLost", value:0.3, unlockStage:1 },
+        { name:"稳住气息", desc:"恢复已损失生命 35%", effect:"healLost", value:0.35, unlockStage:6 },
+        { name:"回血一口", desc:"恢复已损失生命 40%", effect:"healLost", value:0.4, unlockStage:12 },
+    ];
 
     onLoad(): void {
         MainPanel.instance = this;
@@ -521,7 +550,10 @@ export default class MainPanel extends BaseUI {
                     )
                     .call(() => {
                         // 剑先飞出，再突出最终攻击力，顺序上更像“本次攻击已经打出去”。
-                        this.playTotalAttackFocus(this.calculateData.totalPoints * this.calculateData.totalMultiple + totalAttack);
+                        let rawAttack:number = this.getFinalAttackWithEventBonus(this.calculateData.totalPoints * this.calculateData.totalMultiple + totalAttack);
+                        let realDamage:number = this.getRealDamageAfterShield(rawAttack);
+                        this.refreshShieldDamageTip(rawAttack, realDamage);
+                        this.playTotalAttackFocus(realDamage);
                     })
                     .to(0.15, { scale: this.swordOriginScale})
                     .delay(0.4)
@@ -802,21 +834,23 @@ export default class MainPanel extends BaseUI {
     private processAttackMonster(allPoint: number[], calculatorAttack: number) {
         let totalAttack: number = this.calculateData.totalPoints * this.calculateData.totalMultiple;
         console.log("开始攻击，攻击力为" + totalAttack);
-        let finalAttack = totalAttack + calculatorAttack;
-        console.log("最终真实准备造成的伤害" + finalAttack);
-        DiceGameSave.recordDamage(finalAttack);
+        let finalAttack = this.getFinalAttackWithEventBonus(totalAttack + calculatorAttack);
+        let realDamage:number = this.getRealDamageAfterShield(finalAttack);
+        GameMain.extraDamageRate = 0;
+        console.log("最终真实准备造成的伤害" + realDamage);
+        DiceGameSave.recordDamage(realDamage);
         GameMain.instance.reportBestDamage(DiceGameSave.getBestDamage());
-        this.applyAttackDamageAndCleanup(allPoint, finalAttack);
+        this.applyAttackDamageAndCleanup(allPoint, finalAttack, realDamage);
     }
 
     /**
      * 真正执行扣血、震屏、移除骰子和重置战斗状态。
      * 斩杀预告会延迟调用这里，普通攻击会立即调用这里。
      */
-    private applyAttackDamageAndCleanup(allPoint: number[], finalAttack:number){
+    private applyAttackDamageAndCleanup(allPoint: number[], finalAttack:number, realDamage:number){
         this.monster.beHurt(finalAttack);
 
-        let finalScale = Math.min((1.0 + (finalAttack * 0.03 / 10)),1.2)
+        let finalScale = Math.min((1.0 + (realDamage * 0.03 / 10)),1.2)
         this.cameraShake(finalScale);
 
         for (let i = 0; i < this.selectedDice.length; i++) {
@@ -872,14 +906,16 @@ export default class MainPanel extends BaseUI {
     }
 
     private loadGame() {
-        setTimeout(() => {
-            this.loadChapter()
-        }, 150);
+        this.waitingLoadChapter = true;
+        this.tryLoadChapterAfterDataReady();
     }
 
     loadData(){
         this.allMonsterDatas = [];
         this.allCharmDatas = [];
+        this.monsterDataLoaded = false;
+        CreateChapter.init();
+
         GameMain.instance.bundle.load("datas/monster", cc.JsonAsset, (err, json) => {
             if(!this.node || !cc.isValid(this.node))return;
             if(err || !json || !json.json || !json.json.monster){
@@ -905,6 +941,8 @@ export default class MainPanel extends BaseUI {
                 }
                 this.allMonsterDatas.push(newMonsterData);
             }
+            this.monsterDataLoaded = true;
+            this.tryLoadChapterAfterDataReady();
         })
         GameMain.instance.bundle.load("datas/charm", cc.JsonAsset, (err, json) => {
             if(!this.node || !cc.isValid(this.node))return;
@@ -929,7 +967,18 @@ export default class MainPanel extends BaseUI {
                 this.allCharmDatas.push(newCharmData);
             }
         })
-        CreateChapter.init();
+    }
+
+    /**
+     * 等怪物数据加载完成后再打开章节选择。
+     * 手机扫码真机加载比浏览器慢，不能用固定延迟，否则第2关卡片会拿不到怪物数据。
+     */
+    private tryLoadChapterAfterDataReady(){
+        if(!this.waitingLoadChapter)return;
+        if(!this.monsterDataLoaded)return;
+
+        this.waitingLoadChapter = false;
+        this.loadChapter();
     }
 
     loadDices(dTypes:DiceType[]) {
@@ -1147,31 +1196,79 @@ export default class MainPanel extends BaseUI {
     }
 
     openShop(nodeData:Chapter){
-        // 当前轻量版先不接商店构筑，保留入口并给明确提示。
-        GameMain.instance.showTip("商店功能后续开放");
-        GameMain.curStageIndex++;
-        this.scheduleOnce(() => {
-            this.loadChapter();
-        }, 0.1);
+        // shop 类型改成“铸骰台”补给，不打开商店界面，只给轻量数值变化。
+        this.applyLightEventReward(this.forgeRewards);
     }
 
     openRest(nodeData:Chapter){
-        // 当前轻量版先不做休息养成，保留入口并给明确提示。
-        GameMain.instance.player.addHp(25);
-        GameMain.instance.showTip("休息恢复25生命");
-        GameMain.curStageIndex++;
-        this.scheduleOnce(() => {
-            this.loadChapter();
-        }, 0.1);
+        // 休息只恢复一部分已损失生命，避免直接回满导致后续压力被抹平。
+        this.applyLightEventReward(this.restRewards);
     }
 
     openTreasure(nodeData:Chapter){
-        // 当前轻量版先不接宝箱构筑，保留入口并给明确提示。
-        GameMain.instance.showTip("宝箱功能后续开放");
+        // 宝箱只给下次攻击的小幅百分比增伤，反馈明确但不引入构筑选择。
+        this.applyLightEventReward(this.treasureRewards);
+    }
+
+    /**
+     * 执行轻量事件奖励。
+     * 事件节点不进入新界面，点完立刻给数值变化并推进到下一关，保持微信小游戏短节奏。
+     */
+    private applyLightEventReward(rewards:LightEventReward[]){
+        let reward:LightEventReward = this.getRandomLightEventReward(rewards);
+        if(!reward)return;
+
+        let tipText:string = this.applyLightEventRewardValue(reward);
+        GameMain.instance.showTip(tipText);
         GameMain.curStageIndex++;
         this.scheduleOnce(() => {
             this.loadChapter();
-        }, 0.1);
+        }, 0.25);
+    }
+
+    /**
+     * 从已解锁奖励里随机一个。
+     * unlockStage 用今日总关卡控制强度，避免前期直接随机到过强补给。
+     */
+    private getRandomLightEventReward(rewards:LightEventReward[]):LightEventReward{
+        let stageScore:number = GameMain.instance.getChallengeStageScore();
+        let canUseRewards:LightEventReward[] = rewards.filter((reward:LightEventReward) => {
+            return reward.unlockStage <= stageScore;
+        });
+        if(canUseRewards.length <= 0){
+            return rewards[0];
+        }
+
+        return canUseRewards[randomInt(0, canUseRewards.length)];
+    }
+
+    /**
+     * 应用事件奖励的具体数值。
+     * 所有奖励都只影响玩家血量或下一次攻击，不增加长期养成压力。
+     */
+    private applyLightEventRewardValue(reward:LightEventReward):string{
+        if(reward.effect === "point"){
+            GameMain.extraPoint += reward.value;
+            return `${reward.name}\n${reward.desc}`;
+        }
+
+        if(reward.effect === "damageRate"){
+            GameMain.extraDamageRate += reward.value;
+            return `${reward.name}\n${reward.desc}`;
+        }
+
+        if(reward.effect === "healLost"){
+            let player:Player = GameMain.instance.player;
+            let lostHp:number = Math.max(player.totalHp - player.curHP, 0);
+            let healValue:number = Math.ceil(lostHp * reward.value);
+            if(lostHp > 0 && healValue < 8){
+                healValue = Math.min(8, lostHp);
+            }
+            player.addHp(healValue);
+            return `${reward.name}\n恢复 ${healValue} 生命`;
+        }
+
+        return `${reward.name}\n${reward.desc}`;
     }
 
     openBattle(nodeData:Chapter){
@@ -1262,11 +1359,14 @@ export default class MainPanel extends BaseUI {
 
     refreshAllUIText(p: number, m: number, totalAttack: number = 0, callBack: any = null, immediate: boolean = true) {
         this.calculateData = new CalculateData(p, m);
+        let rawShowAttack:number = this.getFinalAttackWithEventBonus(p * m + totalAttack);
+        let finalShowAttack:number = this.getRealDamageAfterShield(rawShowAttack);
         if (immediate) {
             this.restoreTotalAttackFocus(!this.attackVisualPlaying);
             this.NumPointsText.string = p.toString();
             this.NumMultipleText.string = m.toString();
-            this.TotalText.string = (p * m + totalAttack).toString();
+            this.TotalText.string = finalShowAttack.toString();
+            this.refreshShieldDamageTip(rawShowAttack, finalShowAttack);
             this.refreshBattleWarningEffects();
         } else {
             setTimeout(() => {
@@ -1283,8 +1383,9 @@ export default class MainPanel extends BaseUI {
                             this.nodeScale(this.TotalText.node)
                             this.cameraShake(1.06);
                             setTimeout(() => {
-                                this.TotalText.string = (p * m + totalAttack).toString()
+                                this.TotalText.string = finalShowAttack.toString()
                                 this.nodeScale(this.TotalText.node)
+                                this.refreshShieldDamageTip(rawShowAttack, finalShowAttack);
                                 this.refreshBattleWarningEffects();
                                 this.NumPointsText.node.parent.active = false;
                                 this.NumMultipleText.node.parent.active = false;
@@ -1298,8 +1399,9 @@ export default class MainPanel extends BaseUI {
                         }
                         else {
                             this.cameraShake(1.06);
-                            this.TotalText.string = (p * m).toString();
+                            this.TotalText.string = finalShowAttack.toString();
                             this.nodeScale(this.TotalText.node)
+                            this.refreshShieldDamageTip(rawShowAttack, finalShowAttack);
                             this.refreshBattleWarningEffects();
                             this.NumPointsText.node.parent.active = false;
                             this.NumMultipleText.node.parent.active = false;
@@ -1763,7 +1865,47 @@ export default class MainPanel extends BaseUI {
             }
         }
 
-        return previewPoints * previewMultiple + previewExtraAttack;
+        return this.getFinalAttackWithEventBonus(previewPoints * previewMultiple + previewExtraAttack);
+    }
+
+    /**
+     * 计算事件百分比增伤后的最终攻击力。
+     * 真实攻击和斩杀预览都走这里，避免预览和实际伤害不一致。
+     */
+    private getFinalAttackWithEventBonus(baseAttack:number):number{
+        if(GameMain.extraDamageRate <= 0)return baseAttack;
+
+        return Math.ceil(baseAttack * (1 + GameMain.extraDamageRate));
+    }
+
+    /**
+     * 计算扣除怪物护盾后的实际伤害。
+     * 攻击力文本和最高伤害记录都显示这个值，和怪物血条真实减少保持一致。
+     */
+    private getRealDamageAfterShield(rawAttack:number):number{
+        if(!this.monster || rawAttack <= 0)return rawAttack;
+
+        let realDamage:number = rawAttack - this.monster.getCurShield();
+        if(realDamage <= 0){
+            realDamage = 1;
+        }
+        return realDamage;
+    }
+
+    /**
+     * 刷新护盾抵消说明。
+     * 主攻击数字显示实际伤害，这里只补充护盾挡住的伤害，避免玩家误以为少算伤害。
+     */
+    private refreshShieldDamageTip(rawAttack:number, realDamage:number){
+        if(!this.shieldDamageLabel || !this.shieldDamageLabel.node || !cc.isValid(this.shieldDamageLabel.node))return;
+
+        let shieldValue:number = this.monster ? this.monster.getCurShield() : 0;
+        let blockedDamage:number = Math.max(rawAttack - realDamage, 0);
+        let show:boolean = rawAttack > 0 && shieldValue > 0 && blockedDamage > 0;
+        this.shieldDamageLabel.node.active = show;
+        if(!show)return;
+
+        this.shieldDamageLabel.string = `护盾挡住 ${blockedDamage}点`;
     }
 
     private refreshLowHpWarningEffect(){
