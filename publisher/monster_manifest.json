@@ -1,0 +1,102 @@
+[
+  {
+    "name": "m001_green_slime",
+    "file": "m001_green_slime.png",
+    "size": "256x256"
+  },
+  {
+    "name": "m002_bat",
+    "file": "m002_bat.png",
+    "size": "256x256"
+  },
+  {
+    "name": "m003_skeleton",
+    "file": "m003_skeleton.png",
+    "size": "256x256"
+  },
+  {
+    "name": "m004_poison_blob",
+    "file": "m004_poison_blob.png",
+    "size": "256x256"
+  },
+  {
+    "name": "m005_iron_bug",
+    "file": "m005_iron_bug.png",
+    "size": "256x256"
+  },
+  {
+    "name": "m006_red_thief",
+    "file": "m006_red_thief.png",
+    "size": "256x256"
+  },
+  {
+    "name": "m007_stone_guard",
+    "file": "m007_stone_guard.png",
+    "size": "256x256"
+  },
+  {
+    "name": "m008_fire_imp",
+    "file": "m008_fire_imp.png",
+    "size": "256x256"
+  },
+  {
+    "name": "m009_shadow_mage",
+    "file": "m009_shadow_mage.png",
+    "size": "256x256"
+  },
+  {
+    "name": "m010_gold_gremlin",
+    "file": "m010_gold_gremlin.png",
+    "size": "256x256"
+  },
+  {
+    "name": "m011_double_knight",
+    "file": "m011_double_knight.png",
+    "size": "256x256"
+  },
+  {
+    "name": "m012_curse_wizard",
+    "file": "m012_curse_wizard.png",
+    "size": "256x256"
+  },
+  {
+    "name": "m013_big_mouth",
+    "file": "m013_big_mouth.png",
+    "size": "256x256"
+  },
+  {
+    "name": "m014_mirror_golem",
+    "file": "m014_mirror_golem.png",
+    "size": "256x256"
+  },
+  {
+    "name": "m015_abyss_hunter",
+    "file": "m015_abyss_hunter.png",
+    "size": "256x256"
+  },
+  {
+    "name": "m016_abyss_mud_shadow",
+    "file": "m016_abyss_mud_shadow.png",
+    "size": "256x256"
+  },
+  {
+    "name": "m017_split_wing_bat_king",
+    "file": "m017_split_wing_bat_king.png",
+    "size": "256x256"
+  },
+  {
+    "name": "m018_heavy_bone_guard",
+    "file": "m018_heavy_bone_guard.png",
+    "size": "256x256"
+  },
+  {
+    "name": "m019_abyss_poison_core",
+    "file": "m019_abyss_poison_core.png",
+    "size": "256x256"
+  },
+  {
+    "name": "m020_abyss_lord",
+    "file": "m020_abyss_lord.png",
+    "size": "256x256"
+  }
+]

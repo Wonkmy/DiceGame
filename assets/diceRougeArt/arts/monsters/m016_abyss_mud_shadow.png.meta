@@ -1,0 +1,40 @@
+{
+  "ver": "2.3.7",
+  "uuid": "8957f0bb-91b7-4bd7-aaa8-6307f78960e4",
+  "importer": {
+    "textureType": 2
+  },
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 256,
+  "height": 256,
+  "platformSettings": {},
+  "subMetas": {
+    "m016_abyss_mud_shadow": {
+      "ver": "1.0.6",
+      "uuid": "7bbcc33b-e476-4a0d-b5d7-f129a598fc21",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "8957f0bb-91b7-4bd7-aaa8-6307f78960e4",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": -0.5,
+      "offsetY": -2,
+      "trimX": 14,
+      "trimY": 14,
+      "width": 227,
+      "height": 232,
+      "rawWidth": 256,
+      "rawHeight": 256,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

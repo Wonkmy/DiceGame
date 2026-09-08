@@ -1,7 +1,7 @@
 import GameMain from "../GameMain";
 import { FaynUtils } from "../Global/FaynUtils";
 import { BaseUI } from "../UIManager/BaseUI";
-import { CalculateData, Chapter, CharmData, CreateChapter, DiceHandResult, DiceHandType, DiceNodePoint, DiceType, GameChapter, GetCalculateMultiple, getNoOverlapDicePositions, MonsterData, randomInt } from "../Global/DiceHandUtil";
+import { CalculateData, Chapter, CharmData, CreateChapter, DiceHandResult, DiceHandType, DiceNodePoint, DiceType, GameChapter, GetCalculateMultiple, getDiceHandResult, getNoOverlapDicePositions, MonsterData, randomInt } from "../Global/DiceHandUtil";
 import Dice from "../GameCodes/Dice";
 import Tip from "../GameCodes/Tip";
 import Monster from "../GameCodes/Monster";
@@ -52,8 +52,9 @@ export default class MainPanel extends BaseUI {
     // 前3个怪固定骰面：1教学、2有压力、3低输出高压力；第4个怪开始恢复随机
     private fixedDicePointsByMonster:number[][] = [
         [6, 6, 2, 4, 1],
-        [2, 2, 1, 4, 6],
-        [1, 1, 2, 4, 6],
+        [3, 3, 1, 5, 6],
+        // 顺子判定为3个连续点数即可成立，第3关固定骰面不能包含三连，避免直接打出高爆发。
+        [1, 1, 3, 5, 6],
     ];
     private hasUsedFixedDicePoints:boolean = false;
     private firstGuideActive:boolean = false;
@@ -151,21 +152,25 @@ export default class MainPanel extends BaseUI {
     private swordFeverLevel:number = 0;
     private monsterDataLoaded:boolean = false;
     private waitingLoadChapter:boolean = false;
+    private freeRerollUsed:boolean = false;
+    private diceReadyForFreeReroll:boolean = false;
+    private rerollBtnOriginColor:cc.Color = null!;
+    private readonly FREE_REROLL_UNLOCK_STAGE:number = 4;
     private readonly ATTACK_LOCK_TIMEOUT:number = 8;
     private readonly forgeRewards:LightEventReward[] = [
-        { name:"擦亮剑锋", desc:"下次攻击点数 +6", effect:"point", value:6, unlockStage:1 },
-        { name:"淬一口火", desc:"下次攻击点数 +8", effect:"point", value:8, unlockStage:5 },
-        { name:"骰火开刃", desc:"下次攻击点数 +10", effect:"point", value:10, unlockStage:11 },
+        { name:"擦亮剑锋", desc:"下次攻击点数 +5", effect:"point", value:5, unlockStage:1 },
+        { name:"淬一口火", desc:"下次攻击点数 +7", effect:"point", value:7, unlockStage:5 },
+        { name:"骰火开刃", desc:"下次攻击点数 +9", effect:"point", value:9, unlockStage:11 },
     ];
     private readonly treasureRewards:LightEventReward[] = [
-        { name:"小宝箱", desc:"下次最终伤害 +8%", effect:"damageRate", value:0.08, unlockStage:1 },
-        { name:"亮晶宝箱", desc:"下次最终伤害 +10%", effect:"damageRate", value:0.1, unlockStage:5 },
-        { name:"深渊宝箱", desc:"下次最终伤害 +12%", effect:"damageRate", value:0.12, unlockStage:11 },
+        { name:"小宝箱", desc:"下次最终伤害 +6%", effect:"damageRate", value:0.06, unlockStage:1 },
+        { name:"亮晶宝箱", desc:"下次最终伤害 +8%", effect:"damageRate", value:0.08, unlockStage:5 },
+        { name:"深渊宝箱", desc:"下次最终伤害 +10%", effect:"damageRate", value:0.1, unlockStage:11 },
     ];
     private readonly restRewards:LightEventReward[] = [
-        { name:"短暂休整", desc:"恢复已损失生命 30%", effect:"healLost", value:0.3, unlockStage:1 },
-        { name:"稳住气息", desc:"恢复已损失生命 35%", effect:"healLost", value:0.35, unlockStage:6 },
-        { name:"回血一口", desc:"恢复已损失生命 40%", effect:"healLost", value:0.4, unlockStage:12 },
+        { name:"短暂休整", desc:"恢复已损失生命 28%", effect:"healLost", value:0.28, unlockStage:1 },
+        { name:"稳住气息", desc:"恢复已损失生命 33%", effect:"healLost", value:0.33, unlockStage:6 },
+        { name:"回血一口", desc:"恢复已损失生命 38%", effect:"healLost", value:0.38, unlockStage:12 },
     ];
 
     onLoad(): void {
@@ -196,6 +201,11 @@ export default class MainPanel extends BaseUI {
         if(this.btn_openDicePackage){
             this.btn_openDicePackage.off(cc.Node.EventType.TOUCH_END,this.onOpenBagPanel,this);
             this.btn_openDicePackage.on(cc.Node.EventType.TOUCH_END,this.onOpenBagPanel,this);
+        }
+        if(this.btn_onRoll){
+            this.btn_onRoll.off(cc.Node.EventType.TOUCH_END,this.onReRoll,this);
+            this.btn_onRoll.on(cc.Node.EventType.TOUCH_END,this.onReRoll,this);
+            this.refreshFreeRerollBtnState();
         }
         this.createHomeBtn();
         if(CC_DEBUG){
@@ -235,6 +245,8 @@ export default class MainPanel extends BaseUI {
         this.currentNodeData = null!;
         this.battlleIn = false;
         this.onRollling = false;
+        this.freeRerollUsed = false;
+        this.diceReadyForFreeReroll = false;
         this.hasUsedFixedDicePoints = false;
         this.firstGuideActive = false;
         this.attackVisualPlaying = false;
@@ -248,6 +260,7 @@ export default class MainPanel extends BaseUI {
         this.restoreTotalAttackFocus();
         this.restoreSwordOrigin();
         this.setAttackBtnLocked(false);
+        this.refreshFreeRerollBtnState();
 
         // 重新进入 MainPanel 时，清掉上一轮可能残留的骰子、怪物和 Buff 节点。
         for(let i = gamingContainer.children.length - 1; i >= 0; i--){
@@ -454,7 +467,8 @@ export default class MainPanel extends BaseUI {
         })
     }
     /**
-     * 重新刷新当前店铺物品，需要花费高额预算（后期看广告的盈利点）
+     * 玩家主动弃骰重掷。
+     * 第4关开始每只怪只能用1次，只刷新桌面骰子，不触发攻击和怪物回合。
      */
     onReRoll(){
         if(GameMain.gameFinished){
@@ -464,13 +478,138 @@ export default class MainPanel extends BaseUI {
             })
             return;
         }
+        if(!this.canUseFreeReroll()){
+            let tip:string = GameMain.instance.getChallengeStageScore() < this.FREE_REROLL_UNLOCK_STAGE ? "第4关开始可弃骰重掷" : "本关已重掷过";
+            GameMain.instance.showTip(tip);
+            this.refreshFreeRerollBtnState();
+            return;
+        }
+        if(this.onRollling)return;
+
+        this.freeRerollUsed = true;
+        this.refreshFreeRerollBtnState();
+        this.clearCurrentDicesForReroll();
+        this.rollDicesOnce(0.15, this.createBalancedRerollPoints());
+    }
+
+    /**
+     * 系统自动补骰。
+     * 开局和怪物攻击后调用这里，不受“第4关才开放免费重掷”的限制。
+     */
+    public autoRollDices(delay:number = 1){
+        if(GameMain.gameFinished || !this.monster)return;
+
+        this.rollDicesOnce(delay);
+    }
+
+    /**
+     * 发出一轮骰子。
+     * forcedPoints 只用于弃骰重掷的轻量控质，不改变普通发骰和固定教学骰面的规则。
+     */
+    private rollDicesOnce(delay:number = 1, forcedPoints:number[] = null!){
         if(this.onRollling)return;
         this.onRollling = true;
+        this.diceReadyForFreeReroll = false;
+        this.refreshFreeRerollBtnState();
 
         this.scheduleOnce(()=>{
             FaynUtils.PlayMusic("btnclick",false,1);
-            this.loadDices(GameMain.instance.player.curSelectedDiceType);
-        },1);
+            this.loadDices(GameMain.instance.player.curSelectedDiceType, forcedPoints);
+        },delay);
+    }
+
+    /**
+     * 判断当前是否允许免费弃骰重掷。
+     * 只看关卡、次数和战斗状态，不掺杂骰子生成逻辑。
+     */
+    private canUseFreeReroll():boolean{
+        if(GameMain.gameFinished || this.battlleIn || this.onRollling || !this.monster)return false;
+        if(GameMain.instance.getChallengeStageScore() < this.FREE_REROLL_UNLOCK_STAGE)return false;
+        if(this.freeRerollUsed)return false;
+        if(!this.diceReadyForFreeReroll)return false;
+        if(this.allDicesNodes.length < 5)return false;
+
+        return true;
+    }
+
+    /**
+     * 刷新弃骰重掷按钮置灰状态。
+     * 第1-3关、已使用、结算中都置灰；点击后仍由 onReRoll 做最终逻辑拦截。
+     */
+    private refreshFreeRerollBtnState(){
+        if(!this.btn_onRoll || !cc.isValid(this.btn_onRoll))return;
+
+        if(this.rerollBtnOriginColor === null){
+            this.rerollBtnOriginColor = this.btn_onRoll.color;
+        }
+
+        let canReroll:boolean = this.canUseFreeReroll();
+        let btnComp:cc.Button = this.btn_onRoll.getComponent(cc.Button);
+        if(canReroll){
+            this.btn_onRoll.opacity = 255;
+            this.btn_onRoll.color = this.rerollBtnOriginColor;
+            if(btnComp)btnComp.interactable = true;
+        }else{
+            this.btn_onRoll.opacity = 120;
+            this.btn_onRoll.color = cc.color(135, 135, 135, 255);
+            if(btnComp)btnComp.interactable = false;
+        }
+    }
+
+    /**
+     * 弃骰重掷前清理当前桌面骰子和选择反馈。
+     * 所有数组重新赋值，避免旧骰子节点销毁后还被后续计算引用。
+     */
+    private clearCurrentDicesForReroll(){
+        for(let i = 0; i < this.allDicesNodes.length; i++){
+            let diceNode:cc.Node = this.allDicesNodes[i];
+            if(!diceNode || !cc.isValid(diceNode))continue;
+
+            cc.Tween.stopAllByTarget(diceNode);
+            let viewNode:cc.Node = diceNode.getChildByName("view");
+            if(viewNode)cc.Tween.stopAllByTarget(viewNode);
+            diceNode.destroy();
+        }
+
+        this.allDicesNodes = [];
+        this.selectedDicePoint = [];
+        this.selectedDice = [];
+        this.curDiceHandResult = null!;
+        this.calculateData = null!;
+        this.unusePointCount = 5;
+        this.refreshAllUIText(0, 0, 0, null, true);
+        this.refreshShieldDamageTip(0, 0);
+        this.hideBattleWarningEffects();
+
+        let handWordNode:cc.Node = this.node.getChildByName("GamingContainer").getChildByName("handwords");
+        if(handWordNode){
+            cc.Tween.stopAllByTarget(handWordNode);
+            handWordNode.active = false;
+            let sp:cc.Sprite = handWordNode.getComponent(cc.Sprite);
+            if(sp)sp.spriteFrame = null!;
+        }
+    }
+
+    /**
+     * 生成一组中等强度的弃骰点数。
+     * 目标是避免“完全没牌型”和“直接大爆发”，让重掷像一次补救机会，不像系统送赢。
+     */
+    private createBalancedRerollPoints():number[]{
+        let fallback:number[] = [2, 2, 4, 5, 1];
+
+        for(let i = 0; i < 24; i++){
+            let points:number[] = [];
+            for(let j = 0; j < 5; j++){
+                points.push(randomInt(1, 7));
+            }
+
+            let result:DiceHandResult = getDiceHandResult(points);
+            if(result.type === DiceHandType.Pair || result.type === DiceHandType.Three){
+                return points.slice();
+            }
+        }
+
+        return fallback.slice();
     }
 
     private onStartBattle() {
@@ -993,9 +1132,11 @@ export default class MainPanel extends BaseUI {
         this.loadChapter();
     }
 
-    loadDices(dTypes:DiceType[]) {
+    loadDices(dTypes:DiceType[], forcedDicePoints:number[] = null!) {
         if(!dTypes || dTypes.length <= 0){
             this.onRollling = false;
+            this.diceReadyForFreeReroll = false;
+            this.refreshFreeRerollBtnState();
             GameMain.instance.showTip("骰子数据为空，请重新进入");
             return;
         }
@@ -1005,6 +1146,8 @@ export default class MainPanel extends BaseUI {
             if (err || !prefab) {
                 console.error("骰子预制体加载失败:", err);
                 this.onRollling = false;
+                this.diceReadyForFreeReroll = false;
+                this.refreshFreeRerollBtnState();
                 GameMain.instance.showTip("骰子加载失败，请重试");
                 return;
             }
@@ -1026,14 +1169,17 @@ export default class MainPanel extends BaseUI {
             );
             if(this.unusePointCount > 0 && points.length <= 0){
                 this.onRollling = false;
+                this.diceReadyForFreeReroll = false;
+                this.refreshFreeRerollBtnState();
                 GameMain.instance.showTip("骰子落点生成失败，请重试");
                 return;
             }
 
-            for (let i = 0; i < Math.min(this.unusePointCount, points.length); i++) {
+            let createCount:number = Math.min(this.unusePointCount, points.length);
+            for (let i = 0; i < createCount; i++) {
                 let btn_openDicePackagePos = this.node.getChildByName("GamingContainer").getChildByName("btn_openDicePackage");
                 // 固定点数要在tween回调前先取好，否则标记位提前变化会导致首轮也变随机
-                let fixedPoint:number = this.getFixedDicePoint(i);
+                let fixedPoint:number = forcedDicePoints && forcedDicePoints[i] ? forcedDicePoints[i] : this.getFixedDicePoint(i);
                 cc.tween(btn_openDicePackagePos)
                     .delay(i * 0.2)
                     .to(0.2, { scale: 1.2 })
@@ -1053,10 +1199,19 @@ export default class MainPanel extends BaseUI {
                     .start()
             }
 
+            // 等最后一颗骰子落地并结束滚动后再释放，避免玩家在点数未稳定时再次重掷。
+            let unlockDelay:number = createCount > 0 ? (createCount - 1) * 0.2 + 1.25 : 0;
+            this.scheduleOnce(() => {
+                this.onRollling = false;
+                this.diceReadyForFreeReroll = createCount > 0;
+                this.refreshFreeRerollBtnState();
+            }, unlockDelay);
+
             if(this.getCurBattleFixedDicePoints().length > 0 && this.hasUsedFixedDicePoints == false){
                 this.hasUsedFixedDicePoints = true;
                 this.tryStartFirstGuide();
             }
+            this.refreshFreeRerollBtnState();
         })
     }
 
@@ -1290,6 +1445,9 @@ export default class MainPanel extends BaseUI {
     openBattle(nodeData:Chapter){
         this.currentNodeData = nodeData;
         this.hasUsedFixedDicePoints = false;
+        this.freeRerollUsed = false;
+        this.diceReadyForFreeReroll = false;
+        this.refreshFreeRerollBtnState();
         // 进入新战斗先清掉上一关的危险提示，等新怪物加载完成后再按当前怪物重新判断。
         this.setLoopEffectVisible(this.lowHpWarningNode, false, "lowHp");
         this.playStageStartTips();
@@ -1319,7 +1477,7 @@ export default class MainPanel extends BaseUI {
                 if(!this.node || !cc.isValid(this.node) || this.monster !== monsterComp || GameMain.gameFinished)return;
                 monsterComp.playEnterAnim(() => {
                     if(!this.node || !cc.isValid(this.node) || this.monster !== monsterComp || GameMain.gameFinished)return;
-                    this.onReRoll();
+                    this.autoRollDices();
                 });
             }, 0.35);
         })
@@ -1602,6 +1760,7 @@ export default class MainPanel extends BaseUI {
         this.restoreTotalAttackFocus(true);
         this.setAttackBtnLocked(false);
         this.refreshAttackBtnState(false);
+        this.refreshFreeRerollBtnState();
     }
 
     /**
@@ -2041,6 +2200,9 @@ export default class MainPanel extends BaseUI {
         }
         if(this.btn_openDicePackage){
             this.btn_openDicePackage.off(cc.Node.EventType.TOUCH_END,this.onOpenBagPanel,this);
+        }
+        if(this.btn_onRoll){
+            this.btn_onRoll.off(cc.Node.EventType.TOUCH_END,this.onReRoll,this);
         }
         this.calculateData = null!;
         this.selectedDicePoint = [];

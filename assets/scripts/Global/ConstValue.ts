@@ -18,6 +18,8 @@ export class ConstValue {
     public static readonly SHARE_HELP_QUERY = "from=help&stage={stage}";
     public static readonly SHARE_CHALLENGE_TITLE = "今日挑战已结束，来看看你的手气";
     public static readonly SHARE_CHALLENGE_QUERY = "from=challenge";
+    // 微信后台「游戏圈」生成的游戏内跳转 ID；提审前在后台开启游戏圈后填入。
+    public static readonly GAME_CIRCLE_OPEN_LINK = "";
     // public static readonly SCREEN_HEIGHT = 1334;
     // public static readonly SCREEN_WIDTH = 750;
     // public static readonly ANGRY_TIME = 30;

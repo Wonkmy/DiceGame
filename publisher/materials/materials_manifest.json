@@ -1,0 +1,138 @@
+{
+  "source_format_reference": "E:\\dev\\cocoscreator\\ai-minigame\\JiuHuoGame\\publisher\\materials",
+  "output": "E:\\dev\\cocoscreator\\DiceRouge\\publisher\\materials",
+  "font": "C:\\Windows\\Fonts\\msyhbd.ttc",
+  "masters": [
+    "C:\\Users\\Administrator\\.codex\\generated_images\\019f989c-4027-7ef3-8a13-05fdcd9af23d\\call_YPelDGr5xpN1Ht2R65iL7Du6.png",
+    "C:\\Users\\Administrator\\.codex\\generated_images\\019f989c-4027-7ef3-8a13-05fdcd9af23d\\call_oglrM0dPCevVoANlx1MtiOVt.png",
+    "C:\\Users\\Administrator\\.codex\\generated_images\\019f989c-4027-7ef3-8a13-05fdcd9af23d\\call_H2hBw1op5k7ljmt5JGznsomL.png",
+    "C:\\Users\\Administrator\\.codex\\generated_images\\019f989c-4027-7ef3-8a13-05fdcd9af23d\\call_wGpuVj7kcVWjDbbBEI0QOMLP.png"
+  ],
+  "files": [
+    {
+      "name": "dice_rouge_icon_512.png",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "name": "dice_rouge_materials_preview.jpg",
+      "width": 1040,
+      "height": 1380
+    },
+    {
+      "name": "mid_autumn_event_banner_650x250.jpg",
+      "width": 650,
+      "height": 250
+    },
+    {
+      "name": "mid_autumn_market_icon_512.png",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "name": "mid_autumn_materials_preview.jpg",
+      "width": 1040,
+      "height": 1380
+    },
+    {
+      "name": "mid_autumn_promo_horizontal_01_1280x720.jpg",
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "name": "mid_autumn_promo_horizontal_02_1280x720.jpg",
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "name": "mid_autumn_promo_horizontal_03_1280x720.jpg",
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "name": "mid_autumn_promo_vertical_01_720x1280.jpg",
+      "width": 720,
+      "height": 1280
+    },
+    {
+      "name": "mid_autumn_promo_vertical_02_720x1280.jpg",
+      "width": 720,
+      "height": 1280
+    },
+    {
+      "name": "mid_autumn_promo_vertical_03_720x1280.jpg",
+      "width": 720,
+      "height": 1280
+    },
+    {
+      "name": "wechat_gamecircle_promo_horizontal_01_1280x720.jpg",
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "name": "wechat_gamecircle_promo_horizontal_02_1280x720.jpg",
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "name": "wechat_gamecircle_promo_horizontal_03_1280x720.jpg",
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "name": "wechat_gamecircle_promo_vertical_01_720x1280.jpg",
+      "width": 720,
+      "height": 1280
+    },
+    {
+      "name": "wechat_gamecircle_promo_vertical_02_720x1280.jpg",
+      "width": 720,
+      "height": 1280
+    },
+    {
+      "name": "wechat_gamecircle_promo_vertical_03_720x1280.jpg",
+      "width": 720,
+      "height": 1280
+    },
+    {
+      "name": "wechat_search_cover_650x250.jpg",
+      "width": 650,
+      "height": 250
+    },
+    {
+      "name": "wechat_share_card_01_500x400.jpg",
+      "width": 500,
+      "height": 400
+    },
+    {
+      "name": "wechat_share_card_02_500x400.jpg",
+      "width": 500,
+      "height": 400
+    },
+    {
+      "name": "wechat_share_card_03_500x400.jpg",
+      "width": 500,
+      "height": 400
+    },
+    {
+      "name": "wechat_share_card_04_500x400.jpg",
+      "width": 500,
+      "height": 400
+    },
+    {
+      "name": "wechat_share_card_05_500x400.jpg",
+      "width": 500,
+      "height": 400
+    },
+    {
+      "name": "游戏圈banner.png",
+      "width": 1080,
+      "height": 270
+    },
+    {
+      "name": "游戏圈banner1280270.jpg",
+      "width": 1080,
+      "height": 270
+    }
+  ]
+}

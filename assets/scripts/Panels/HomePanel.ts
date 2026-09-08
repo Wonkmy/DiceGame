@@ -7,6 +7,7 @@ import ShareManager from "../GameCodes/ShareManager";
 import DiceGameSave from "../GameCodes/DiceGameSave";
 import DebugTool from "../GameCodes/DebugTool";
 import RankPanel from "./RankPanel";
+import GameCircleManager from "../GameCodes/GameCircleManager";
 
 const {ccclass, property} = cc._decorator;
 
@@ -37,6 +38,9 @@ export default class HomePanel extends BaseUI {
 
     @property({type:cc.Node, displayName:"排行榜按钮", tooltip:"点击后打开排行榜入口，当前版本先显示预留提示"})
     btn_rank:cc.Node = null!;
+
+    @property({type:cc.Node, displayName:"游戏圈按钮", tooltip:"点击后打开微信游戏圈；仅微信小游戏环境有效"})
+    btn_gameCircle:cc.Node = null!;
 
     onLoad(): void {
         HomePanel.instance = this;
@@ -70,6 +74,11 @@ export default class HomePanel extends BaseUI {
         if(this.btn_rank){
             this.btn_rank.off(cc.Node.EventType.TOUCH_END);
             this.btn_rank.on(cc.Node.EventType.TOUCH_END, this.openRankPanel, this);
+        }
+
+        if(this.btn_gameCircle){
+            this.btn_gameCircle.off(cc.Node.EventType.TOUCH_END, this.openGameCircle, this);
+            this.btn_gameCircle.on(cc.Node.EventType.TOUCH_END, this.openGameCircle, this);
         }
 
         // 旧版是按节点名自动查找和动态创建主界面内容；现在改为 Creator 面板拖拽变量。
@@ -206,6 +215,14 @@ export default class HomePanel extends BaseUI {
     }
 
     /**
+     * 打开微信游戏圈。
+     * 这里只作为主界面入口，具体微信 API 和失败提示统一放到 GameCircleManager。
+     */
+    private openGameCircle(){
+        GameCircleManager.openGameCircle();
+    }
+
+    /**
      * 分享今日战绩。
      * 用具名函数绑定，避免 HomePanel 重复 onShow 时按钮事件叠加。
      */
@@ -252,6 +269,9 @@ export default class HomePanel extends BaseUI {
 
         if(this.btn_rank){
             this.btn_rank.off(cc.Node.EventType.TOUCH_END, this.openRankPanel, this);
+        }
+        if(this.btn_gameCircle){
+            this.btn_gameCircle.off(cc.Node.EventType.TOUCH_END, this.openGameCircle, this);
         }
         HomePanel.instance = null!;
     }

@@ -1,0 +1,40 @@
+{
+  "ver": "2.3.7",
+  "uuid": "130342a1-159f-4a0a-ad53-b78c4741df41",
+  "importer": {
+    "textureType": 2
+  },
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 256,
+  "height": 256,
+  "platformSettings": {},
+  "subMetas": {
+    "m019_abyss_poison_core": {
+      "ver": "1.0.6",
+      "uuid": "ce8f828b-079b-4523-aa58-3ca686ee2535",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "130342a1-159f-4a0a-ad53-b78c4741df41",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": -2,
+      "trimX": 20,
+      "trimY": 14,
+      "width": 216,
+      "height": 232,
+      "rawWidth": 256,
+      "rawHeight": 256,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

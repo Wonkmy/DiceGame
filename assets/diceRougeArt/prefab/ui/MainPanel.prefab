@@ -580,7 +580,7 @@
         "__id__": 14
       }
     ],
-    "_active": false,
+    "_active": true,
     "_components": [
       {
         "__id__": 18
@@ -614,8 +614,8 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        -153.547,
-        -355,
+        0,
+        -505.76,
         0,
         0,
         0,
@@ -623,7 +623,7 @@
         1,
         1,
         1,
-        1
+        0
       ]
     },
     "_eulerAngles": {
@@ -669,7 +669,7 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 126,
+      "width": 86,
       "height": 56.4
     },
     "_anchorPoint": {
@@ -721,8 +721,8 @@
     ],
     "_srcBlendFactor": 770,
     "_dstBlendFactor": 771,
-    "_string": "掷骰子",
-    "_N$string": "掷骰子",
+    "_string": "重掷",
+    "_N$string": "重掷",
     "_fontSize": 40,
     "_lineHeight": 40,
     "_enableWrapText": true,

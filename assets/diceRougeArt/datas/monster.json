@@ -14,9 +14,9 @@
             "id": "m002",
             "name": "尖牙蝠",
             "stage": 1,
-            "hp": 34,
-            "shiled": 1,
-            "attack": 10,
+            "hp": 36,
+            "shiled": 2,
+            "attack": 12,
             "gold": 5,
             "asset": "m002_bat"
         },
@@ -24,9 +24,9 @@
             "id": "m003",
             "name": "骨头兵",
             "stage": 1,
-            "hp": 52,
-            "shiled": 4,
-            "attack": 18,
+            "hp": 48,
+            "shiled": 5,
+            "attack": 22,
             "gold": 6,
             "behaviorData": {
                 "type": "attack",
@@ -39,9 +39,9 @@
             "id": "m004",
             "name": "毒泡怪",
             "stage": 1,
-            "hp": 48,
-            "shiled": 2,
-            "attack": 16,
+            "hp": 54,
+            "shiled": 3,
+            "attack": 18,
             "gold": 6,
             "asset": "m004_poison_blob"
         },
@@ -49,14 +49,14 @@
             "id": "m005",
             "name": "铁壳虫",
             "stage": 1,
-            "hp": 70,
+            "hp": 72,
             "shiled": 5,
-            "attack": 18,
+            "attack": 22,
             "gold": 8,
             "behaviorData": {
                 "type": "attack-shiled",
-                "des": "每回合攻击+1、护盾+1",
-                "bValue": 1
+                "des": "每回合攻击+2、护盾+2",
+                "bValue": 2
             },
             "asset": "m005_iron_bug"
         },
@@ -64,9 +64,9 @@
             "id": "m006",
             "name": "红眼盗贼",
             "stage": 2,
-            "hp": 78,
-            "shiled": 2,
-            "attack": 20,
+            "hp": 82,
+            "shiled": 3,
+            "attack": 24,
             "gold": 8,
             "asset": "m006_red_thief"
         },
@@ -74,9 +74,9 @@
             "id": "m007",
             "name": "石像守卫",
             "stage": 2,
-            "hp": 96,
-            "shiled": 5,
-            "attack": 22,
+            "hp": 100,
+            "shiled": 6,
+            "attack": 26,
             "gold": 9,
             "asset": "m007_stone_guard"
         },
@@ -84,9 +84,9 @@
             "id": "m008",
             "name": "火焰小鬼",
             "stage": 2,
-            "hp": 128,
-            "shiled": 4,
-            "attack": 26,
+            "hp": 118,
+            "shiled": 5,
+            "attack": 28,
             "gold": 9,
             "asset": "m008_fire_imp"
         },
@@ -94,14 +94,14 @@
             "id": "m009",
             "name": "暗影法师",
             "stage": 2,
-            "hp": 92,
-            "shiled": 5,
-            "attack": 24,
+            "hp": 104,
+            "shiled": 6,
+            "attack": 28,
             "gold": 10,
             "behaviorData": {
                 "type": "attack",
-                "des": "每回合攻击+3",
-                "bValue": 3
+                "des": "每回合攻击+4",
+                "bValue": 4
             },
             "asset": "m009_shadow_mage"
         },
@@ -109,9 +109,9 @@
             "id": "m010",
             "name": "贪金币怪",
             "stage": 2,
-            "hp": 116,
-            "shiled": 4,
-            "attack": 26,
+            "hp": 132,
+            "shiled": 5,
+            "attack": 30,
             "gold": 13,
             "asset": "m010_gold_gremlin"
         },
@@ -119,9 +119,9 @@
             "id": "m011",
             "name": "双刃骑士",
             "stage": 3,
-            "hp": 138,
-            "shiled": 5,
-            "attack": 29,
+            "hp": 140,
+            "shiled": 6,
+            "attack": 31,
             "gold": 12,
             "asset": "m011_double_knight"
         },
@@ -129,14 +129,14 @@
             "id": "m012",
             "name": "诅咒巫师",
             "stage": 3,
-            "hp": 150,
-            "shiled": 6,
-            "attack": 30,
+            "hp": 154,
+            "shiled": 7,
+            "attack": 33,
             "gold": 13,
             "behaviorData": {
                 "type": "attack",
-                "des": "每回合攻击+3",
-                "bValue": 3
+                "des": "每回合攻击+4",
+                "bValue": 4
             },
             "asset": "m012_curse_wizard"
         },
@@ -144,9 +144,9 @@
             "id": "m013",
             "name": "巨口吞噬者",
             "stage": 3,
-            "hp": 158,
-            "shiled": 6,
-            "attack": 32,
+            "hp": 166,
+            "shiled": 7,
+            "attack": 34,
             "gold": 14,
             "asset": "m013_big_mouth"
         },
@@ -154,9 +154,9 @@
             "id": "m014",
             "name": "镜面傀儡",
             "stage": 3,
-            "hp": 178,
-            "shiled": 7,
-            "attack": 34,
+            "hp": 184,
+            "shiled": 8,
+            "attack": 36,
             "gold": 15,
             "behaviorData": {
                 "type": "attack-shiled",
@@ -169,14 +169,14 @@
             "id": "m015",
             "name": "深渊猎手",
             "stage": 3,
-            "hp": 210,
-            "shiled": 7,
-            "attack": 36,
+            "hp": 220,
+            "shiled": 8,
+            "attack": 38,
             "gold": 20,
             "behaviorData": {
                 "type": "attack",
-                "des": "每回合攻击+3",
-                "bValue": 3
+                "des": "每回合攻击+4",
+                "bValue": 4
             },
             "asset": "m015_abyss_hunter"
         },
@@ -184,66 +184,66 @@
             "id": "m016",
             "name": "深渊泥影",
             "stage": 4,
-            "hp": 168,
-            "shiled": 7,
-            "attack": 32,
+            "hp": 176,
+            "shiled": 8,
+            "attack": 34,
             "gold": 14,
-            "asset": "m001_green_slime"
+            "asset": "m016_abyss_mud_shadow"
         },
         {
             "id": "m017",
             "name": "裂翼蝠王",
             "stage": 4,
-            "hp": 190,
-            "shiled": 6,
-            "attack": 35,
+            "hp": 198,
+            "shiled": 7,
+            "attack": 37,
             "gold": 15,
             "behaviorData": {
                 "type": "attack",
-                "des": "每回合攻击+3",
-                "bValue": 3
+                "des": "每回合攻击+4",
+                "bValue": 4
             },
-            "asset": "m002_bat"
+            "asset": "m017_split_wing_bat_king"
         },
         {
             "id": "m018",
             "name": "重甲骨卫",
             "stage": 4,
-            "hp": 205,
-            "shiled": 8,
-            "attack": 36,
+            "hp": 214,
+            "shiled": 9,
+            "attack": 38,
             "gold": 16,
             "behaviorData": {
                 "type": "attack-shiled",
                 "des": "每回合攻击+1、护盾+1",
                 "bValue": 1
             },
-            "asset": "m003_skeleton"
+            "asset": "m018_heavy_bone_guard"
         },
         {
             "id": "m019",
             "name": "深渊毒核",
             "stage": 4,
-            "hp": 220,
-            "shiled": 8,
-            "attack": 38,
+            "hp": 232,
+            "shiled": 9,
+            "attack": 40,
             "gold": 18,
-            "asset": "m004_poison_blob"
+            "asset": "m019_abyss_poison_core"
         },
         {
             "id": "m020",
             "name": "深渊领主",
             "stage": 4,
-            "hp": 260,
-            "shiled": 9,
-            "attack": 42,
+            "hp": 270,
+            "shiled": 10,
+            "attack": 44,
             "gold": 25,
             "behaviorData": {
                 "type": "attack",
-                "des": "每回合攻击+4",
-                "bValue": 4
+                "des": "每回合攻击+5",
+                "bValue": 5
             },
-            "asset": "m015_abyss_hunter"
+            "asset": "m020_abyss_lord"
         }
     ]
 }

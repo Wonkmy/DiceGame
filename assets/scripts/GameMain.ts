@@ -52,28 +52,29 @@ export default class GameMain extends cc.Component {
         GameMain.curWinStreak = 0;
         ShareManager.initShareMenu();
         Advertise.init();
-        if(CC_DEBUG){
-            cc.assetManager.loadBundle("diceRougeArt",null!,(err,_bundle)=>{
+
+        cc.assetManager.loadBundle("diceRougeArt",null!,(err,_bundle)=>{
                 this.bundle = _bundle
                 this.gameLoader();
             })
-        }else{
-            // cc.assetManager.loadBundle("https://wonkmycloudfile.oss-cn-beijing.aliyuncs.com/diceRougeArt",null!,(err,_bundle)=>{
-            //     this.bundle = _bundle
-            //     this.gameLoader();
-            // })
-            const ossUrl = "https://wonkmycloudfile.oss-cn-beijing.aliyuncs.com/diceRougeArt";
-            cc.assetManager.loadBundle(ossUrl + "?t=" + Date.now(), null!, (err, bundle) => {
-                if (err) {
-                    console.error("OSS加载失败:", err);
-                    // 如果这里报错，说明 OSS 路径或跨域还有问题
-                    return;
-                }
-                console.log("成功从 OSS 加载 Bundle！");
-                this.bundle = bundle;
-                this.gameLoader();
-            });
-        }
+        // if(CC_DEBUG){
+        //     cc.assetManager.loadBundle("diceRougeArt",null!,(err,_bundle)=>{
+        //         this.bundle = _bundle
+        //         this.gameLoader();
+        //     })
+        // }else{
+        //     const ossUrl = "https://wonkmycloudfile.oss-cn-beijing.aliyuncs.com/diceRougeArt";
+        //     cc.assetManager.loadBundle(ossUrl + "?t=" + Date.now(), null!, (err, bundle) => {
+        //         if (err) {
+        //             console.error("OSS加载失败:", err);
+        //             // 如果这里报错，说明 OSS 路径或跨域还有问题
+        //             return;
+        //         }
+        //         console.log("成功从 OSS 加载 Bundle！");
+        //         this.bundle = bundle;
+        //         this.gameLoader();
+        //     });
+        // }
     }
 
 

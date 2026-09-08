@@ -24,12 +24,21 @@ export default class Monster extends cc.Component {
     private readonly LOW_HP_WARNING_RATE:number = 0.25;
     private monsterViewOriginScale:number = 1;
     private monsterViewOriginY:number = 0;
+    private monsterViewMaxWidth:number = 0;
+    private monsterViewMaxHeight:number = 0;
+    private readonly MONSTER_VIEW_SCALE_RATE:number = 1.4;
     private monsterIntentOriginScale:number = 1;
     private monsterIntentOriginColor:cc.Color = null!;
 
     protected onLoad(): void {
         this.hpSlider = this.node.getChildByName("hp_bg").getChildByName("hp_fg");
         this.hpText = this.node.getChildByName("hp_txt").getComponent(cc.Label);
+        let viewNode:cc.Node = this.node.getChildByName("view");
+        if(viewNode && cc.isValid(viewNode)){
+            // 记录预制体里怪物显示节点的最大显示范围，后面只等比缩放，不再强行拉伸。
+            this.monsterViewMaxWidth = viewNode.width;
+            this.monsterViewMaxHeight = viewNode.height;
+        }
     }
 
     init(_monsterData:MonsterData){
@@ -43,12 +52,47 @@ export default class Monster extends cc.Component {
             if(!this.node || !cc.isValid(this.node))return;
             let sprite: cc.Sprite = this.node.getChildByName("view").getComponent(cc.Sprite);
             sprite.spriteFrame = sf;
+            this.refreshMonsterViewSize(sf);
         })
 
         this.refreshHP_Slider();
         this.refreshInfo();
         this.stopLowHpFeedback();
         this.cacheEnterOriginState();
+    }
+
+    /**
+     * 根据 SpriteFrame 裁剪后的真实尺寸等比刷新怪物显示。
+     * 新怪物图虽然是 256x256，但开启 TrimType 后真正内容区域不是 256，所以这里用 rect 尺寸计算。
+     */
+    private refreshMonsterViewSize(spriteFrame:cc.SpriteFrame){
+        let viewNode:cc.Node = this.node.getChildByName("view");
+        if(!viewNode || !cc.isValid(viewNode) || !spriteFrame)return;
+
+        let rect:cc.Rect = spriteFrame.getRect();
+        let realWidth:number = rect && rect.width > 0 ? rect.width : spriteFrame.getOriginalSize().width;
+        let realHeight:number = rect && rect.height > 0 ? rect.height : spriteFrame.getOriginalSize().height;
+        if(realWidth <= 0 || realHeight <= 0)return;
+
+        let maxWidth:number = this.monsterViewMaxWidth > 0 ? this.monsterViewMaxWidth : viewNode.width;
+        let maxHeight:number = this.monsterViewMaxHeight > 0 ? this.monsterViewMaxHeight : viewNode.height;
+        // 允许小体型精灵按显示框等比放大，否则 Trim 后的蝙蝠、盗贼会显得过小。
+        let scale:number = Math.min(maxWidth / realWidth, maxHeight / realHeight) * this.getMonsterViewScaleRate();
+
+        viewNode.width = realWidth * scale;
+        viewNode.height = realHeight * scale;
+    }
+
+    /**
+     * 获取怪物显示倍率。
+     * 前两只怪物本身轮廓偏矮，额外放大一点，避免新手关压迫感不足。
+     */
+    private getMonsterViewScaleRate():number{
+        if(this.monsterData && (this.monsterData.id == "m001" || this.monsterData.id == "m002")){
+            return 1.65;
+        }
+
+        return this.MONSTER_VIEW_SCALE_RATE;
     }
 
     /**

@@ -192,7 +192,8 @@ export default class Player extends cc.Component {
         )
         .call(()=>{
             this.attackbg.active = false;
-            MainPanel.instance.onReRoll();
+            // 怪物攻击结束后的补骰属于系统流程，不走玩家手动弃骰重掷限制。
+            MainPanel.instance.autoRollDices();
         })
         .start()
 
