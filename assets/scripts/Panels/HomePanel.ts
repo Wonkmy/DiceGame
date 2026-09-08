@@ -15,6 +15,7 @@ export default class HomePanel extends BaseUI {
     public static instance:HomePanel = null!;
     protected static className = "HomePanel";
     private isSharingChallenge:boolean = false;
+    private startingChallenge:boolean = false;
 
     @property({type:cc.Label, displayName:"标题文本", tooltip:"主界面顶部显示的游戏标题文本"})
     titleLabel:cc.Label = null!;
@@ -42,6 +43,7 @@ export default class HomePanel extends BaseUI {
     }
 
     override onShow(): void {
+        this.startingChallenge = false;
         this.bindHomeBtns();
         this.refreshStartView();
         if(CC_DEBUG){
@@ -112,6 +114,8 @@ export default class HomePanel extends BaseUI {
     }
 
     private onStartChallenge(){
+        if(this.startingChallenge)return;
+
         if(DiceGameSave.getRemainDailyChallengeCount() <= 0){
             if(DiceGameSave.getRemainDailyShareChallengeCount() > 0){
                 this.shareAddChallenge();
@@ -220,6 +224,9 @@ export default class HomePanel extends BaseUI {
     }
 
     private startGame(){
+        if(this.startingChallenge)return;
+
+        this.startingChallenge = true;
         // 先重置挑战数据，再打开战斗界面，避免 MainPanel.onShow 读取到上一局残留关卡或状态。
         GameMain.instance.resetRunData();
         UIManager.getInstance().closeUI(HomePanel);

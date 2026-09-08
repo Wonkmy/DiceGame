@@ -50,10 +50,10 @@ export default class LoadingPanel extends BaseUI {
             // 先重置挑战数据，再打开战斗界面，避免 MainPanel.onShow 读取旧进度。
             GameMain.instance.resetRunData();
             GameMain.isNewUserFirstPlay = true;
+            // 新用户首次自动进入后的本轮挑战和失败重试，章节预告页继续显示“新手章节”。
+            GameMain.isNewUserChapterNameFlow = true;
             UIManager.getInstance().openUI(MainPanel,0,(ui:MainPanel)=>{
                 ui.onShow();
-                // 新用户首次自动进入后的本轮挑战和失败重试，章节预告页继续显示“新手章节”。
-                GameMain.isNewUserChapterNameFlow = true;
                 GameMain.instance.player.getDices();
                 GameMain.instance.playMarketBgmOnce();
             })

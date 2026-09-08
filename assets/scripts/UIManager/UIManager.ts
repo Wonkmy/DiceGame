@@ -23,8 +23,14 @@ export class UIManager
 
     public openUI<T extends BaseUI>(uiClass: UIClass<T>, zOrder?: number, callback?: Function, onProgress?: Function, ...args: any[])
     {
-        if(this.getUI(uiClass))
+        let oldUI:BaseUI = this.getUI(uiClass);
+        if(oldUI)
         {
+            // 已经打开的面板也要执行回调，避免 TipPanel、RankPanel 等重复打开时内容不刷新。
+            if(callback)
+            {
+                callback(oldUI, args);
+            }
             return;
         }
 
@@ -40,8 +46,14 @@ export class UIManager
                 cc.log(error);
                 return;
             }
-            if(this.getUI(uiClass))
+            let loadedOldUI:BaseUI = this.getUI(uiClass);
+            if(loadedOldUI)
             {
+                // 异步加载期间如果同类面板已被打开，直接回调已有面板，不再实例化第二个。
+                if(callback)
+                {
+                    callback(loadedOldUI, args);
+                }
                 return;
             }
             let uiNode: cc.Node = cc.instantiate(prefab);
@@ -72,7 +84,8 @@ export class UIManager
     }
     public closeALLUI()
     {
-        for(let i = 0; i < this.uiList.length; ++i)
+        // 倒序关闭，避免边遍历边删除导致跳过某个面板。
+        for(let i = this.uiList.length - 1; i >= 0; --i)
         {
             this.uiList[i].node.destroy();
             this.uiList.splice(i, 1);

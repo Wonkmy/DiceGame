@@ -67,12 +67,19 @@ export default class ResultPanel extends BaseUI{
     private shareHelpGuideCallback:Function = null!;
     private nextBtnGuideCallback:Function = null!;
     private resultDetailText:string = "";
+    private nextTransitioning:boolean = false;
 
     onLoad(): void {
         this.hideAllResultArt();
     }
 
     override onShow(): void {
+        this.nextTransitioning = false;
+        this.node.opacity = 255;
+        this.restorePanelChildrenOpacity();
+        if(this.btn_next){
+            this.btn_next.resumeSystemEvents(true);
+        }
         this.btn_next.off(cc.Node.EventType.TOUCH_END,this.onNextTurn,this);
         this.btn_next.on(cc.Node.EventType.TOUCH_END,this.onNextTurn,this)
         if(this.btn_shareHelp){
@@ -806,8 +813,11 @@ export default class ResultPanel extends BaseUI{
     }
 
     private onNextTurn(){
+        if(this.nextTransitioning)return;
+
         FaynUtils.PlayMusic("btnclick",false,1);
 
+        let needNextTransition:boolean = GameMain.gameResultType === "stageWin" || (GameMain.gameResultType === "chapterWin" && GameMain.curChapterIndex < 1);
         if(GameMain.gameResultType === "stageWin"){
             GameMain.curStageIndex++;
         }else if(GameMain.gameResultType === "chapterWin" && GameMain.curChapterIndex < 1){
@@ -823,6 +833,21 @@ export default class ResultPanel extends BaseUI{
             return;
         }
 
+        if(needNextTransition){
+            this.playNextStageTransition(() => {
+                this.enterNextStage();
+            });
+            return;
+        }
+
+        this.enterNextStage();
+    }
+
+    /**
+     * 进入下一关。
+     * 胜利过渡、章节通关过渡结束后都复用这里，避免切面板逻辑写散。
+     */
+    private enterNextStage(){
         this.stopResultFeedbackAnim();
         this.stopShareHelpBtnGuideLoop();
         UIManager.getInstance().closeUI(MainPanel);
@@ -833,6 +858,72 @@ export default class ResultPanel extends BaseUI{
                 GameMain.instance.player.getDices();
             }
         })
+    }
+
+    /**
+     * 播放胜利后进入下一关的短过渡。
+     * 只处理视觉和防连点，不改变关卡推进、次数消耗和失败重开逻辑。
+     */
+    private playNextStageTransition(callBack:Function){
+        this.nextTransitioning = true;
+        this.stopNextBtnAnim();
+        this.stopShareHelpBtnGuideLoop();
+
+        if(this.btn_next && cc.isValid(this.btn_next)){
+            this.btn_next.pauseSystemEvents(true);
+            let originScale:number = this.nextBtnOriginScale !== null ? this.nextBtnOriginScale : this.btn_next.scale;
+            cc.Tween.stopAllByTarget(this.btn_next);
+            this.btn_next.scale = originScale;
+            cc.tween(this.btn_next)
+                .to(0.08, { scale:originScale * 0.9 })
+                .to(0.12, { scale:originScale * 1.08 }, { easing:"backOut" })
+                .to(0.08, { scale:originScale })
+                .start();
+        }
+
+        // 先完整播放过渡，再切到下一关，避免点击后立刻关闭造成硬切感。
+        this.playResultPanelFadeOut(0.45);
+        this.scheduleOnce(() => {
+            if(callBack){
+                callBack();
+            }
+        }, 0.55);
+    }
+
+    /**
+     * 淡出结算面板。
+     * 同时处理根节点和直接子节点，避免某些预制体未开启透明级联时看不到淡出。
+     */
+    private playResultPanelFadeOut(duration:number){
+        cc.Tween.stopAllByTarget(this.node);
+        this.node.opacity = 255;
+        cc.tween(this.node)
+            .to(duration, { opacity:0 })
+            .start();
+
+        for(let i = 0; i < this.node.children.length; i++){
+            let child:cc.Node = this.node.children[i];
+            if(!child || !cc.isValid(child))continue;
+
+            cc.Tween.stopAllByTarget(child);
+            child.opacity = 255;
+            cc.tween(child)
+                .to(duration, { opacity:0 })
+                .start();
+        }
+    }
+
+    /**
+     * 恢复结算面板直接子节点透明度。
+     * 下一关过渡会淡出子节点，重新打开面板时必须还原。
+     */
+    private restorePanelChildrenOpacity(){
+        for(let i = 0; i < this.node.children.length; i++){
+            let child:cc.Node = this.node.children[i];
+            if(child && cc.isValid(child)){
+                child.opacity = 255;
+            }
+        }
     }
 
     private restartGame(){

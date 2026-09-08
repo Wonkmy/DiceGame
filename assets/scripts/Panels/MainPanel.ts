@@ -99,6 +99,9 @@ export default class MainPanel extends BaseUI {
     @property({type:cc.Label, displayName:"护盾抵消文本", tooltip:"怪物有护盾时显示，例如：护盾抵消 -2。不拖拽则不显示"})
     shieldDamageLabel:cc.Label = null!;
 
+    @property({type:cc.Label, displayName:"临时加成文本", tooltip:"显示事件节点获得的下次攻击加成，例如：下次攻击 +8点。不拖拽则不显示"})
+    tempBuffLabel:cc.Label = null!;
+
     @property({type:cc.Label})
     testip:cc.Label= null!;
 
@@ -186,8 +189,14 @@ export default class MainPanel extends BaseUI {
 
         this.showCharmData();
 
-        this.btn_start.on(cc.Node.EventType.TOUCH_END,this.onStartBattle,this)
-        this.btn_openDicePackage.on(cc.Node.EventType.TOUCH_END,this.onOpenBagPanel,this)
+        if(this.btn_start){
+            this.btn_start.off(cc.Node.EventType.TOUCH_END,this.onStartBattle,this);
+            this.btn_start.on(cc.Node.EventType.TOUCH_END,this.onStartBattle,this);
+        }
+        if(this.btn_openDicePackage){
+            this.btn_openDicePackage.off(cc.Node.EventType.TOUCH_END,this.onOpenBagPanel,this);
+            this.btn_openDicePackage.on(cc.Node.EventType.TOUCH_END,this.onOpenBagPanel,this);
+        }
         this.createHomeBtn();
         if(CC_DEBUG){
             DebugTool.attach(this.node);
@@ -230,6 +239,7 @@ export default class MainPanel extends BaseUI {
         this.firstGuideActive = false;
         this.attackVisualPlaying = false;
         this.hideFirstGuideText();
+        this.refreshTempBuffLabel();
 
         let gamingContainer:cc.Node = this.node.getChildByName("GamingContainer");
         if(!gamingContainer)return;
@@ -497,6 +507,7 @@ export default class MainPanel extends BaseUI {
 
         GameMain.extraPoint = 0;
         GameMain.extraMultiple = 0;
+        this.refreshTempBuffLabel();
         let totalAttack = 0;
         let processedDice = new Set<cc.Node>();
         for (let i = 0; i < allPoint.length; i++) {
@@ -837,6 +848,7 @@ export default class MainPanel extends BaseUI {
         let finalAttack = this.getFinalAttackWithEventBonus(totalAttack + calculatorAttack);
         let realDamage:number = this.getRealDamageAfterShield(finalAttack);
         GameMain.extraDamageRate = 0;
+        this.refreshTempBuffLabel();
         console.log("最终真实准备造成的伤害" + realDamage);
         DiceGameSave.recordDamage(realDamage);
         GameMain.instance.reportBestDamage(DiceGameSave.getBestDamage());
@@ -1249,11 +1261,13 @@ export default class MainPanel extends BaseUI {
     private applyLightEventRewardValue(reward:LightEventReward):string{
         if(reward.effect === "point"){
             GameMain.extraPoint += reward.value;
+            this.refreshTempBuffLabel();
             return `${reward.name}\n${reward.desc}`;
         }
 
         if(reward.effect === "damageRate"){
             GameMain.extraDamageRate += reward.value;
+            this.refreshTempBuffLabel();
             return `${reward.name}\n${reward.desc}`;
         }
 
@@ -1265,9 +1279,11 @@ export default class MainPanel extends BaseUI {
                 healValue = Math.min(8, lostHp);
             }
             player.addHp(healValue);
+            this.refreshTempBuffLabel();
             return `${reward.name}\n恢复 ${healValue} 生命`;
         }
 
+        this.refreshTempBuffLabel();
         return `${reward.name}\n${reward.desc}`;
     }
 
@@ -1293,14 +1309,23 @@ export default class MainPanel extends BaseUI {
 
             let newMonster: cc.Node = cc.instantiate(prefab);
             this.node.getChildByName("GamingContainer").addChild(newMonster);
-            newMonster.getComponent(Monster).init(md);
-            this.monster = newMonster.getComponent(Monster);
+            let monsterComp:Monster = newMonster.getComponent(Monster);
+            monsterComp.init(md);
+            monsterComp.prepareEnterHidden();
+            this.monster = monsterComp;
             this.refreshBattleWarningEffects();
+            // 进入战斗后先停一拍，再播放怪物登场，节奏上更像正式开战。
+            this.scheduleOnce(() => {
+                if(!this.node || !cc.isValid(this.node) || this.monster !== monsterComp || GameMain.gameFinished)return;
+                monsterComp.playEnterAnim(() => {
+                    if(!this.node || !cc.isValid(this.node) || this.monster !== monsterComp || GameMain.gameFinished)return;
+                    this.onReRoll();
+                });
+            }, 0.35);
         })
         cc.tween(this.node.getChildByName("GamingContainer"))
             .to(0.25, { opacity: 255 })
             .start()
-        this.onReRoll();
     }
 
     disposeMonster(monster:Monster){
@@ -1908,6 +1933,30 @@ export default class MainPanel extends BaseUI {
         this.shieldDamageLabel.string = `护盾挡住 ${blockedDamage}点`;
     }
 
+    /**
+     * 刷新事件临时加成提示。
+     * 只展示下一次攻击会吃到的轻量奖励，不参与真实伤害计算。
+     */
+    private refreshTempBuffLabel(){
+        if(!this.tempBuffLabel || !this.tempBuffLabel.node || !cc.isValid(this.tempBuffLabel.node))return;
+
+        let tips:string[] = [];
+        if(GameMain.extraPoint > 0){
+            tips.push(`下次攻击 +${GameMain.extraPoint}点`);
+        }
+        if(GameMain.extraMultiple > 0){
+            tips.push(`下次倍率 +${GameMain.extraMultiple}`);
+        }
+        if(GameMain.extraDamageRate > 0){
+            tips.push(`下次伤害 +${Math.round(GameMain.extraDamageRate * 100)}%`);
+        }
+
+        this.tempBuffLabel.node.active = tips.length > 0;
+        if(tips.length <= 0)return;
+
+        this.tempBuffLabel.string = tips.join("\n");
+    }
+
     private refreshLowHpWarningEffect(){
         if(!this.lowHpWarningNode)return;
 
@@ -1987,8 +2036,12 @@ export default class MainPanel extends BaseUI {
         }
         this.hideStageStartTips();
         this.hideBattleWarningEffects();
-        this.btn_start.off(cc.Node.EventType.TOUCH_END,this.onStartBattle,this)
-        this.btn_openDicePackage.off(cc.Node.EventType.TOUCH_END,this.onOpenBagPanel,this)
+        if(this.btn_start){
+            this.btn_start.off(cc.Node.EventType.TOUCH_END,this.onStartBattle,this);
+        }
+        if(this.btn_openDicePackage){
+            this.btn_openDicePackage.off(cc.Node.EventType.TOUCH_END,this.onOpenBagPanel,this);
+        }
         this.calculateData = null!;
         this.selectedDicePoint = [];
         this.selectedDice = [];

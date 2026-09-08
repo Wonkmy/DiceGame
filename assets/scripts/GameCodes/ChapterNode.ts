@@ -17,23 +17,31 @@ const {ccclass, property} = cc._decorator;
 export default class ChapterNode extends cc.Component {
     nodeData:Chapter = null!;
     private originScale:number = 1;
+    private clicked:boolean = false;
 
     init(_nodedata:Chapter){
         this.nodeData = _nodedata;
         this.originScale = this.node.scale;
+        this.clicked = false;
         this.playClickGuideAnim();
         this.node.on(cc.Node.EventType.TOUCH_END,this.onEnterChapterStage,this)
     }
 
     private onEnterChapterStage() {
+        if(this.clicked)return;
+
         if(!this.nodeData){
             // 真机资源加载异常时，避免未初始化的卡片点击后直接报错卡死。
             GameMain.instance.showTip("关卡数据加载中，请稍后再试");
             return;
         }
 
+        // 点击后立刻锁住卡片，防止手机连点造成重复领奖、重复开战或跳关。
+        this.clicked = true;
         cc.Tween.stopAllByTarget(this.node);
         this.node.scale = this.originScale;
+        this.node.pauseSystemEvents(true);
+
         if (this.nodeData.type === "battle" || this.nodeData.type === "elite" || this.nodeData.type === "boss") {
             MainPanel.instance.openBattle(this.nodeData);
         } else if (this.nodeData.type === "shop") {// 这个shop是购买给当前章节使用的各种东西

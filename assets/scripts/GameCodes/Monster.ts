@@ -23,6 +23,7 @@ export default class Monster extends cc.Component {
     private hpSliderOriginOpacity:number = 255;
     private readonly LOW_HP_WARNING_RATE:number = 0.25;
     private monsterViewOriginScale:number = 1;
+    private monsterViewOriginY:number = 0;
     private monsterIntentOriginScale:number = 1;
     private monsterIntentOriginColor:cc.Color = null!;
 
@@ -39,6 +40,7 @@ export default class Monster extends cc.Component {
         this.attack = _monsterData.attack;
 
         GameMain.instance.bundle.load("arts/monsters/" + this.monsterData.asset, cc.SpriteFrame, (err, sf: cc.SpriteFrame) => {
+            if(!this.node || !cc.isValid(this.node))return;
             let sprite: cc.Sprite = this.node.getChildByName("view").getComponent(cc.Sprite);
             sprite.spriteFrame = sf;
         })
@@ -46,6 +48,115 @@ export default class Monster extends cc.Component {
         this.refreshHP_Slider();
         this.refreshInfo();
         this.stopLowHpFeedback();
+        this.cacheEnterOriginState();
+    }
+
+    /**
+     * 登场前隐藏怪物和战斗信息。
+     * MainPanel 延迟开场时先调用这个函数，避免怪物提前露出来。
+     */
+    public prepareEnterHidden(){
+        let viewNode:cc.Node = this.node.getChildByName("view");
+        if(viewNode && cc.isValid(viewNode)){
+            this.cacheEnterOriginState();
+            cc.Tween.stopAllByTarget(viewNode);
+            viewNode.y = this.monsterViewOriginY + 90;
+            viewNode.scale = this.monsterViewOriginScale * 0.86;
+            viewNode.opacity = 0;
+        }
+
+        this.setBattleInfoVisible(false);
+    }
+
+    /**
+     * 播放怪物登场动画。
+     * MainPanel 只等待回调发骰子，具体表现留在怪物脚本里，避免开战流程耦合太重。
+     */
+    public playEnterAnim(callBack:Function = null!){
+        let viewNode:cc.Node = this.node.getChildByName("view");
+        if(!viewNode || !cc.isValid(viewNode)){
+            if(callBack){
+                callBack();
+            }
+            return;
+        }
+
+        if(viewNode.opacity > 0){
+            this.cacheEnterOriginState();
+        }
+        this.setBattleInfoVisible(false);
+        cc.Tween.stopAllByTarget(viewNode);
+        if(viewNode.opacity > 0){
+            viewNode.y = this.monsterViewOriginY + 90;
+            viewNode.scale = this.monsterViewOriginScale * 0.86;
+            viewNode.opacity = 0;
+        }
+
+        cc.tween(viewNode)
+            .parallel(
+                cc.tween().to(0.22, { y:this.monsterViewOriginY, opacity:255 }, { easing:"cubicOut" }),
+                cc.tween().to(0.22, { scale:this.monsterViewOriginScale * 1.12 }, { easing:"backOut" })
+            )
+            .to(0.08, { scale:this.monsterViewOriginScale * 0.96 })
+            .to(0.08, { scale:this.monsterViewOriginScale })
+            .call(() => {
+                this.setBattleInfoVisible(true);
+                this.playInfoEnterAnim();
+                if(callBack){
+                    callBack();
+                }
+            })
+            .start();
+    }
+
+    /**
+     * 记录怪物显示节点初始状态。
+     * 后续攻击、受击、死亡都基于这个位置，不让登场动画污染节点坐标。
+     */
+    private cacheEnterOriginState(){
+        let viewNode:cc.Node = this.node.getChildByName("view");
+        if(!viewNode || !cc.isValid(viewNode))return;
+
+        this.monsterViewOriginY = viewNode.y;
+        this.monsterViewOriginScale = viewNode.scale;
+    }
+
+    /**
+     * 控制血条、攻击意图等战斗信息显隐。
+     * 登场时先藏，怪物落稳后再显示，开场节奏更清楚。
+     */
+    private setBattleInfoVisible(show:boolean){
+        let nodeNames:string[] = ["hp_bg", "hp_txt", "monster_intent_bg", "mName"];
+        for(let i = 0; i < nodeNames.length; i++){
+            let target:cc.Node = this.node.getChildByName(nodeNames[i]);
+            if(target && cc.isValid(target)){
+                target.active = show;
+            }
+        }
+    }
+
+    /**
+     * 战斗信息出现时轻微弹一下。
+     * 只做显示反馈，不修改怪物攻击、护盾和血量。
+     */
+    private playInfoEnterAnim(){
+        let intentNode:cc.Node = this.node.getChildByName("monster_intent_bg");
+        let hpBgNode:cc.Node = this.node.getChildByName("hp_bg");
+        this.playInfoNodeEnterAnim(intentNode);
+        this.playInfoNodeEnterAnim(hpBgNode);
+    }
+
+    private playInfoNodeEnterAnim(target:cc.Node){
+        if(!target || !cc.isValid(target))return;
+
+        cc.Tween.stopAllByTarget(target);
+        let originScale:number = target.scale;
+        target.scale = originScale * 0.9;
+        target.opacity = 0;
+        cc.tween(target)
+            .to(0.12, { scale:originScale * 1.06, opacity:255 }, { easing:"backOut" })
+            .to(0.08, { scale:originScale })
+            .start();
     }
 
     beHurt(v:number){

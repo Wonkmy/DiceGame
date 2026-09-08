@@ -28,18 +28,33 @@ export default class TipPanel extends BaseUI {
 
         this.bgNode = this.flyTxtRoot ? this.flyTxtRoot.getChildByName("bg") : null!;
         this.flyTxt = this.flyTxtRoot.getComponentInChildren(cc.Label);
-        this.node.getChildByName("splash").on(cc.Node.EventType.TOUCH_END, () => {
-            UIManager.getInstance().closeUI(TipPanel);
-        },this)
+        let splash:cc.Node = this.node.getChildByName("splash");
+        if(splash){
+            splash.off(cc.Node.EventType.TOUCH_END);
+            splash.on(cc.Node.EventType.TOUCH_END, this.closeSelf, this);
+        }
     }
 
     showTip(txt:string,callBack:any,externAnim:boolean = false,delayTime:number = 0.75)
     {
+        if(!this.flyTxt || !this.flyTxtRoot){
+            this.onShow();
+        }
+        if(!this.flyTxt || !this.flyTxtRoot)return;
+
+        this.unschedule(this.closeSelf);
+        cc.Tween.stopAllByTarget(this.flyTxtRoot);
+        this.flyTxtRoot.opacity = 255;
+        this.flyTxtRoot.scale = 1;
+        this.flyTxtRoot.y = 0;
         this.flyTxt.string = txt;
         this.refreshTipBoxSize();
         this.node.active = true;
+        let splash:cc.Node = this.node.getChildByName("splash");
+        if(splash){
+            splash.opacity = externAnim ? 190 : 0;
+        }
         if(externAnim){
-            this.node.getChildByName("splash").opacity = 190;
             cc.tween(this.flyTxt.node.parent)
             .to(0.25,{scale:1.35},{easing:'inBack'})
             .to(0.25,{scale:1.0},{easing:'outBack'})
@@ -49,18 +64,21 @@ export default class TipPanel extends BaseUI {
                 if(callBack){
                     callBack();
                 }
-                UIManager.getInstance().closeUI(TipPanel);
+                this.closeSelf();
             })
             .start()
         }else{
             cc.tween(this.flyTxt.node.parent)
                 .by(0.5,{y:150})
-                .delay(delayTime)
                 .call(()=>{
-                    UIManager.getInstance().closeUI(TipPanel);
+                    this.scheduleOnce(this.closeSelf, delayTime);
                 })
                 .start()
         }
+    }
+
+    private closeSelf(){
+        UIManager.getInstance().closeUI(TipPanel);
     }
 
     /**
@@ -109,5 +127,12 @@ export default class TipPanel extends BaseUI {
 
         let lines:string[] = this.flyTxt.string.split("\n");
         return Math.max(1, lines.length) * this.flyTxt.lineHeight;
+    }
+
+    override onDestroy(): void {
+        this.unschedule(this.closeSelf);
+        if(this.flyTxtRoot && cc.isValid(this.flyTxtRoot)){
+            cc.Tween.stopAllByTarget(this.flyTxtRoot);
+        }
     }
 }
