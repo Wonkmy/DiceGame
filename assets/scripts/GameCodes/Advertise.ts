@@ -3,14 +3,46 @@ declare const wx: any;
 export class Advertise {
     private static videoAd: any = null;
     private static chaPingAd: any = null;
+    private static geziAd: any = null;
 
     // 广告位先留空，上线前替换成微信后台真实广告ID。
-    private static readonly VIDEO_ID = "";
-    private static readonly CHAPING_ID = "";
+    private static readonly VIDEO_ID = "adunit-e079c8ce1e917b06";// 激励视频
+    private static readonly CHAPING_ID = "adunit-13ff17c64e71d75b";// 插屏广告
+    private static readonly gezi_ID = "adunit-ec70bdeec82aff54";// 格子广告
 
     static init() {
         this.initVideoAd();
         this.initChapingAd();
+        this.initGeziAd();
+    }
+
+    static initGeziAd() {
+        if (!this.canUseWechatAd() || !this.gezi_ID || !wx.createCustomAd) {
+            return;
+        }
+
+        try {
+            this.geziAd = wx.createCustomAd({
+                adUnitId: this.gezi_ID,
+                adIntervals: 30,
+                // 格子广告的样式配置，根据实际需求调整位置和大小
+                // 放在底部中间位置
+                style:{
+                    left:  (cc.winSize.width - 300) / 2,
+                    top: cc.winSize.height - 250 - 20, // 底部留20px间距
+                    width: 300,
+                    height: 250
+                }
+            });
+            if(this.geziAd.onError){
+                this.geziAd.onError((err: any) => {
+                    console.log("格子广告拉取失败", err);
+                });
+            }
+        } catch (e) {
+            console.log("格子广告创建失败", e);
+            this.geziAd = null;
+        }
     }
 
     static initVideoAd() {
