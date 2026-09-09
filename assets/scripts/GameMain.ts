@@ -99,7 +99,7 @@ export default class GameMain extends cc.Component {
         if(this.marketBgmStarted)return;
         this.marketBgmStarted = true;
         // BGM只在进入游戏后播放一次，循环铺底，音量低于点击和反馈音效。
-        FaynUtils.PlayMusic("marketbgm",true,0.35);
+        FaynUtils.PlayMusic("bgmloop",true,0.35);
     }
 
     resetRunData(){

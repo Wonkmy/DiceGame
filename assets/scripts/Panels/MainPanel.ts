@@ -2348,5 +2348,6 @@ export default class MainPanel extends BaseUI {
         this.selectedDice = [];
         this.allDicesNodes = [];
         this.allCharmItems = [];
+        MainPanel.instance = null!;
     }
 }

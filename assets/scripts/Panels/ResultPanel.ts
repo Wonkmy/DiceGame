@@ -977,11 +977,13 @@ export default class ResultPanel extends BaseUI{
         this.stopShareHelpBtnGuideLoop();
         GameMain.instance.restartCurChapterRun();
         UIManager.getInstance().closeUI(MainPanel);
-        UIManager.getInstance().closeUI(ResultPanel);
-        UIManager.getInstance().openUI(MainPanel, 0, (ui: MainPanel) => {
-            ui.onShow();
-            GameMain.instance.player.getDices();
-        })
+        this.scheduleOnce(() => {
+            UIManager.getInstance().openUI(MainPanel, 0, (ui: MainPanel) => {
+                ui.onShow();
+                GameMain.instance.player.getDices();
+                UIManager.getInstance().closeUI(ResultPanel);
+            })
+        }, 0.2);
     }
 
     private onBackHome(){

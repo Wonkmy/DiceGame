@@ -220,7 +220,7 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 97.85,
+      "width": 66.74,
       "height": 50.4
     },
     "_anchorPoint": {
@@ -272,8 +272,8 @@
     ],
     "_srcBlendFactor": 770,
     "_dstBlendFactor": 771,
-    "_string": "battle",
-    "_N$string": "battle",
+    "_string": "???",
+    "_N$string": "???",
     "_fontSize": 40,
     "_lineHeight": 40,
     "_enableWrapText": true,
