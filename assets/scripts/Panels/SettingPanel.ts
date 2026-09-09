@@ -9,6 +9,7 @@ import { ConstValue } from "../Global/ConstValue";
 import { FaynUtils } from "../Global/FaynUtils";
 import { BaseUI } from "../UIManager/BaseUI";
 import { UIManager } from "../UIManager/UIManager";
+import { Advertise } from "../GameCodes/Advertise";
 
 const {ccclass, property} = cc._decorator;
 
@@ -19,6 +20,7 @@ export default class SettingPanel extends BaseUI {
     @property({type:cc.Node})
     close_Self:cc.Node = null!;
     override onShow(): void {
+        Advertise.showBannerForNormalPanel();
         this.close_Self.on(cc.Node.EventType.TOUCH_END,this.onCloseSelf,this);
     }
 

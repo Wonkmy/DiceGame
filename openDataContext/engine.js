@@ -175,6 +175,17 @@ function drawEmpty(style) {
     ctx.fillText('先完成一局，再来看看排名', size.width / 2, size.height / 2 + 28);
 }
 
+function drawMessage(text, style) {
+    const size = getCanvasSize();
+    clear();
+
+    ctx.fillStyle = style.emptyColor || '#e8d6b0';
+    ctx.font = '32px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(text || '功能开发中'), size.width / 2, size.height / 2);
+}
+
 function drawPageInfo(page, totalPage, style) {
     const size = getCanvasSize();
 
@@ -272,4 +283,5 @@ module.exports = {
     setViewPort,
     normalizeRankData,
     drawLeaderboard,
+    drawMessage,
 };

@@ -5,6 +5,7 @@ const {ccclass, property} = cc._decorator;
 import { UIManager } from "../UIManager/UIManager";
 import { FaynUtils } from "../Global/FaynUtils";
 import ItemCell from "../UIManager/ItemCell";
+import { Advertise } from "../GameCodes/Advertise";
 
 @ccclass
 export default class BagPanel extends BaseUI {
@@ -17,6 +18,7 @@ export default class BagPanel extends BaseUI {
     closeBtn:cc.Node = null!;
 
     override onShow(): void {
+        Advertise.showBannerForNormalPanel();
         this.closeBtn.on(cc.Node.EventType.TOUCH_END, () => {
             FaynUtils.PlayMusic("click",false,1);
             UIManager.getInstance().closeUI(BagPanel);

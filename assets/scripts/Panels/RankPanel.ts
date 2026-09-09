@@ -2,6 +2,8 @@ import GameMain from "../GameMain";
 import DiceGameSave from "../GameCodes/DiceGameSave";
 import { BaseUI } from "../UIManager/BaseUI";
 import { UIManager } from "../UIManager/UIManager";
+import { Advertise } from "../GameCodes/Advertise";
+import { ConstValue } from "../Global/ConstValue";
 
 declare const wx:any;
 const {ccclass, property} = cc._decorator;
@@ -38,6 +40,7 @@ export default class RankPanel extends BaseUI {
     private readonly rankKey:string = "rkstage";
     private currentPage:number = 1;
     private openContext:any = null;
+    private openDataView:any = null;
     private rankBtnCooling:boolean = false;
 
     onLoad(): void {
@@ -46,6 +49,7 @@ export default class RankPanel extends BaseUI {
     }
 
     override onShow(): void {
+        Advertise.showBannerForNormalPanel();
         this.currentPage = 1;
         this.refreshPageText();
         this.refreshTopText();
@@ -139,8 +143,13 @@ export default class RankPanel extends BaseUI {
     }
 
     private refreshRank(){
+        if(!ConstValue.ENABLE_FRIEND_RANK){
+            this.showDevelopingTip();
+            return;
+        }
+
         if(!this.canUseOpenDataContext()){
-            this.showLocalTip();
+            this.showDevelopingTip();
             return;
         }
 
@@ -148,14 +157,16 @@ export default class RankPanel extends BaseUI {
             this.openContext = wx.getOpenDataContext();
         }catch(e){
             console.error("获取微信开放数据域失败:", e);
-            this.showLocalTip();
+            this.showDevelopingTip();
             return;
         }
 
         if(!this.openContext || !this.openContext.postMessage){
-            this.showLocalTip();
+            this.showDevelopingTip();
             return;
         }
+
+        this.ensureOpenDataView();
 
         // 打开榜单时补上报一次，避免刚结算后的成绩没有同步到好友榜。
         GameMain.instance.reportChallengeRank(DiceGameSave.getTodayBestStage());
@@ -167,9 +178,50 @@ export default class RankPanel extends BaseUI {
                 key: this.rankKey,
                 page: this.currentPage,
             });
+            this.refreshOpenDataViewLater();
         }catch(e){
             console.error("刷新微信好友榜失败:", e);
-            this.showLocalTip();
+            this.showDevelopingTip();
+        }
+    }
+
+    /**
+     * 开放数据域只能画在 sharedCanvas 上，主域必须挂 WXSubContextView 才能显示。
+     * 这里运行时补组件，避免还要额外在编辑器里拖拽配置。
+     */
+    private ensureOpenDataView(){
+        let listNode = this.getRankListNode();
+        if(!listNode || cc.sys.platform !== cc.sys.WECHAT_GAME)return;
+
+        let wxSubContextView:any = (cc as any).WXSubContextView;
+        if(!wxSubContextView)return;
+
+        this.openDataView = listNode.getComponent(wxSubContextView) || listNode.getComponent("cc.WXSubContextView");
+        if(!this.openDataView){
+            this.openDataView = listNode.addComponent(wxSubContextView);
+        }
+
+        if(this.openDataView){
+            this.openDataView.enabled = true;
+        }
+    }
+
+    private refreshOpenDataViewLater(){
+        this.scheduleOnce(() => {
+            this.refreshOpenDataView();
+        }, 0.1);
+        this.scheduleOnce(() => {
+            this.refreshOpenDataView();
+        }, 0.5);
+    }
+
+    private refreshOpenDataView(){
+        if(!this.openDataView || !this.openDataView.update)return;
+
+        try{
+            this.openDataView.update();
+        }catch(e){
+            console.error("刷新开放数据域画布失败:", e);
         }
     }
 
@@ -182,8 +234,19 @@ export default class RankPanel extends BaseUI {
     }
 
     private showLocalTip(){
-        let topNode = this.node.getChildByName("top");
-        let listNode = topNode ? topNode.getChildByName("list") : null;
+        this.showRankTextTip("好友榜需要在微信开发者工具中查看");
+    }
+
+    /**
+     * 主域无法打开排行榜时的统一提示。
+     * 微信环境下的接口失败由开放数据域自己显示“功能开发中”。
+     */
+    private showDevelopingTip(){
+        this.showRankTextTip("功能开发中");
+    }
+
+    private showRankTextTip(text:string){
+        let listNode = this.getRankListNode();
         if(!listNode)return;
 
         listNode.removeAllChildren();
@@ -193,12 +256,17 @@ export default class RankPanel extends BaseUI {
         listNode.addChild(tipNode);
 
         let label:cc.Label = tipNode.addComponent(cc.Label);
-        label.string = "好友榜需要在微信开发者工具中查看";
+        label.string = text;
         label.fontSize = 28;
         label.lineHeight = 36;
         label.horizontalAlign = cc.Label.HorizontalAlign.CENTER;
         label.verticalAlign = cc.Label.VerticalAlign.CENTER;
         label.node.color = cc.Color.WHITE;
+    }
+
+    private getRankListNode():cc.Node{
+        let topNode = this.node.getChildByName("top");
+        return topNode ? topNode.getChildByName("list") : null!;
     }
 
     private closePanel(){

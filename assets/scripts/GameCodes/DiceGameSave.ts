@@ -5,6 +5,8 @@ export default class DiceGameSave {
     static readonly MAX_DAILY_CHALLENGE_COUNT:number = 5;
     static readonly MAX_DAILY_SHARE_HELP_COUNT:number = 1;
     static readonly MAX_DAILY_SHARE_CHALLENGE_COUNT:number = 1;
+    static readonly MAX_DAILY_VIDEO_CHALLENGE_COUNT:number = 1;
+    static readonly MAX_DAILY_REROLL_VIDEO_COUNT:number = 20;
     private static readonly BEST_DAMAGE_KEY = "dice_best_damage";
     private static readonly BEST_STAGE_KEY = "dice_best_stage";
     private static readonly TOTAL_KILL_KEY = "dice_total_kill";
@@ -15,6 +17,8 @@ export default class DiceGameSave {
     private static readonly NEW_USER_AUTO_PLAY_KEY = "dice_new_user_auto_play";
     private static readonly DAILY_SHARE_HELP_USED_KEY = "dice_daily_share_help_used";
     private static readonly DAILY_SHARE_CHALLENGE_USED_KEY = "dice_daily_share_challenge_used";
+    private static readonly DAILY_VIDEO_CHALLENGE_USED_KEY = "dice_daily_video_challenge_used";
+    private static readonly DAILY_REROLL_VIDEO_USED_KEY = "dice_daily_reroll_video_used";
     private static readonly FIRST_GUIDE_DONE_KEY = "dice_first_guide_done";
     private static readonly FIRST_FAIL_HELP_GUIDE_KEY = "dice_first_fail_help_guide";
     private static readonly FIRST_WIN_SHOW_KEY = "dice_first_win_show";
@@ -107,6 +111,48 @@ export default class DiceGameSave {
         return Math.max(this.MAX_DAILY_SHARE_CHALLENGE_COUNT - usedCount, 0);
     }
 
+    /**
+     * 消耗一次“看广告获得挑战机会”次数。
+     * 每天只允许 1 次，且只在普通次数和好友助战都用完后使用。
+     */
+    static consumeDailyVideoChallengeChance():boolean{
+        this.checkDailyData();
+        let usedCount:number = Number(cc.sys.localStorage.getItem(this.DAILY_VIDEO_CHALLENGE_USED_KEY)) || 0;
+        if(usedCount >= this.MAX_DAILY_VIDEO_CHALLENGE_COUNT){
+            return false;
+        }
+
+        cc.sys.localStorage.setItem(this.DAILY_VIDEO_CHALLENGE_USED_KEY, String(usedCount + 1));
+        return true;
+    }
+
+    static getRemainDailyVideoChallengeCount():number{
+        this.checkDailyData();
+        let usedCount:number = Number(cc.sys.localStorage.getItem(this.DAILY_VIDEO_CHALLENGE_USED_KEY)) || 0;
+        return Math.max(this.MAX_DAILY_VIDEO_CHALLENGE_COUNT - usedCount, 0);
+    }
+
+    /**
+     * 消耗一次重掷激励视频次数。
+     * 限制的是当天所有关卡累计次数，避免重掷广告无限刷。
+     */
+    static consumeDailyRerollVideoChance():boolean{
+        this.checkDailyData();
+        let usedCount:number = Number(cc.sys.localStorage.getItem(this.DAILY_REROLL_VIDEO_USED_KEY)) || 0;
+        if(usedCount >= this.MAX_DAILY_REROLL_VIDEO_COUNT){
+            return false;
+        }
+
+        cc.sys.localStorage.setItem(this.DAILY_REROLL_VIDEO_USED_KEY, String(usedCount + 1));
+        return true;
+    }
+
+    static getRemainDailyRerollVideoCount():number{
+        this.checkDailyData();
+        let usedCount:number = Number(cc.sys.localStorage.getItem(this.DAILY_REROLL_VIDEO_USED_KEY)) || 0;
+        return Math.max(this.MAX_DAILY_REROLL_VIDEO_COUNT - usedCount, 0);
+    }
+
     static addDailyChallengeChance(count:number = 1){
         this.checkDailyData();
         let usedCount:number = Number(cc.sys.localStorage.getItem(this.DAILY_USED_KEY)) || 0;
@@ -196,6 +242,8 @@ export default class DiceGameSave {
         cc.sys.localStorage.removeItem(this.NEW_USER_AUTO_PLAY_KEY);
         cc.sys.localStorage.removeItem(this.DAILY_SHARE_HELP_USED_KEY);
         cc.sys.localStorage.removeItem(this.DAILY_SHARE_CHALLENGE_USED_KEY);
+        cc.sys.localStorage.removeItem(this.DAILY_VIDEO_CHALLENGE_USED_KEY);
+        cc.sys.localStorage.removeItem(this.DAILY_REROLL_VIDEO_USED_KEY);
         cc.sys.localStorage.removeItem(this.FIRST_GUIDE_DONE_KEY);
         cc.sys.localStorage.removeItem(this.FIRST_FAIL_HELP_GUIDE_KEY);
         cc.sys.localStorage.removeItem(this.FIRST_WIN_SHOW_KEY);
@@ -211,6 +259,8 @@ export default class DiceGameSave {
         cc.sys.localStorage.setItem(this.TODAY_BEST_STAGE_KEY, "0");
         cc.sys.localStorage.setItem(this.DAILY_SHARE_HELP_USED_KEY, "0");
         cc.sys.localStorage.setItem(this.DAILY_SHARE_CHALLENGE_USED_KEY, "0");
+        cc.sys.localStorage.setItem(this.DAILY_VIDEO_CHALLENGE_USED_KEY, "0");
+        cc.sys.localStorage.setItem(this.DAILY_REROLL_VIDEO_USED_KEY, "0");
     }
 
     static debugSetNewUser(){
@@ -228,6 +278,8 @@ export default class DiceGameSave {
         this.checkDailyData();
         cc.sys.localStorage.setItem(this.DAILY_SHARE_HELP_USED_KEY, "0");
         cc.sys.localStorage.setItem(this.DAILY_SHARE_CHALLENGE_USED_KEY, "0");
+        cc.sys.localStorage.setItem(this.DAILY_VIDEO_CHALLENGE_USED_KEY, "0");
+        cc.sys.localStorage.setItem(this.DAILY_REROLL_VIDEO_USED_KEY, "0");
     }
 
     private static checkDailyData(){
@@ -241,6 +293,8 @@ export default class DiceGameSave {
         cc.sys.localStorage.setItem(this.TODAY_BEST_STAGE_KEY, "0");
         cc.sys.localStorage.setItem(this.DAILY_SHARE_HELP_USED_KEY, "0");
         cc.sys.localStorage.setItem(this.DAILY_SHARE_CHALLENGE_USED_KEY, "0");
+        cc.sys.localStorage.setItem(this.DAILY_VIDEO_CHALLENGE_USED_KEY, "0");
+        cc.sys.localStorage.setItem(this.DAILY_REROLL_VIDEO_USED_KEY, "0");
     }
 
     private static getTodayKey():string{

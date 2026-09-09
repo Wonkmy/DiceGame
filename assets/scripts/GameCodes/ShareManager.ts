@@ -18,16 +18,18 @@ export default class ShareManager {
 
             if(wx.onShareAppMessage){
                 wx.onShareAppMessage(() => {
-                    return this.getShareData();
+                    return this.getShareData("menu_share");
                 });
             }
 
             if(wx.onShareTimeline){
                 wx.onShareTimeline(() => {
-                    return {
+                    let shareData:any = {
                         title: ConstValue.SHARE_TIMELINE_TITLE,
                         query: ConstValue.SHARE_TIMELINE_QUERY,
                     };
+                    this.addShareImage(shareData);
+                    return shareData;
                 });
             }
         }catch(e){
@@ -42,7 +44,7 @@ export default class ShareManager {
         }
 
         try{
-            wx.shareAppMessage(this.getShareData());
+            wx.shareAppMessage(this.getShareData("share"));
         }catch(e){
             console.error("分享最高伤害失败:", e);
         }
@@ -101,6 +103,23 @@ export default class ShareManager {
     }
 
     /**
+     * 从指定界面主动分享游戏。
+     * 只改 query 来源，方便后面在微信后台区分首页、战斗和结算分享。
+     */
+    static shareFromScene(scene:string) {
+        if (!this.canUseWechatShare()) {
+            console.log("当前环境不支持微信分享，跳过主动分享");
+            return;
+        }
+
+        try{
+            wx.shareAppMessage(this.getShareData(scene));
+        }catch(e){
+            console.error("主动分享失败:", e);
+        }
+    }
+
+    /**
      * 判断当前环境是否可以调用微信分享 API。
      * 只做平台能力判断，避免浏览器/本地调试环境调用 wx 导致主流程中断。
      */
@@ -122,7 +141,7 @@ export default class ShareManager {
         }
     }
 
-    private static getShareData() {
+    private static getShareData(from:string = "share") {
         let damage = Math.max(DiceGameSave.currentMaxDamage, DiceGameSave.getBestDamage());
         let stage = Math.max(DiceGameSave.getTodayBestStage(), DiceGameSave.getBestStage());
         let percent = DiceGameSave.getRegionOvertakePercent(stage);
@@ -130,6 +149,7 @@ export default class ShareManager {
         title = this.format(title, "percent", String(percent));
         let query = this.format(ConstValue.SHARE_RESULT_QUERY, "stage", String(stage));
         query = this.format(query, "damage", String(damage));
+        query += "&scene=" + from;
 
         let shareData:any = {
             title: title,
@@ -144,9 +164,23 @@ export default class ShareManager {
     }
 
     private static addShareImage(shareData:any){
-        // 分享图统一从配置读取，后续换图不用改分享逻辑。
-        if(ConstValue.SHARE_CARD_IMAGE_URL && ConstValue.SHARE_CARD_IMAGE_URL.length > 0){
-            shareData.imageUrl = ConstValue.SHARE_CARD_IMAGE_URL;
+        let imageUrl:string = this.getRandomShareImageUrl();
+        if(imageUrl && imageUrl.length > 0){
+            shareData.imageUrl = imageUrl;
         }
+    }
+
+    /**
+     * 随机获取分享图。
+     * 优先使用图片池；如果图片池为空，再兼容旧版单张分享图配置。
+     */
+    private static getRandomShareImageUrl():string{
+        let urls:string[] = ConstValue.SHARE_CARD_IMAGE_URLS || [];
+        if(urls.length > 0){
+            let index:number = Math.floor(Math.random() * urls.length);
+            return urls[index];
+        }
+
+        return ConstValue.SHARE_CARD_IMAGE_URL;
     }
 }

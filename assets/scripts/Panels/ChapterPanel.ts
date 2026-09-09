@@ -4,6 +4,7 @@ import { Chapter, GameChapter } from "../Global/DiceHandUtil";
 import { BaseUI } from "../UIManager/BaseUI";
 import { UIManager } from "../UIManager/UIManager";
 import MainPanel from "./MainPanel";
+import { Advertise } from "../GameCodes/Advertise";
 
 const {ccclass, property} = cc._decorator;
 
@@ -15,7 +16,7 @@ export default class ChapterPanel extends BaseUI {
     chapterNodeContainer:cc.Node = null!;
 
     override onShow(): void {
-
+        Advertise.showBannerForNormalPanel();
     }
 
     setChapterNode(gameCapter:GameChapter){

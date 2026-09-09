@@ -2,14 +2,19 @@ export class ConstValue {
     public static readonly CONFIG_FILE_DIR = "config/";
     public static readonly PREFAB_UI_DIR = "prefab/ui/";
     public static readonly AUDIO_DIR = "audio/";
-    public static readonly defaultMoney = 1000;
-    public static readonly REROLL_COST = 400;
-    public static readonly TotalPoints = 9;// 鉴赏时可以最多操作几次
 
     public static readonly SHARE_RESULT_TITLE = "我今天冲到第{stage}关，来试试你能到第几关";
     public static readonly SHARE_RESULT_QUERY = "from=share&stage={stage}&damage={damage}";
-    // 分享卡片图片，可填审核域名下的网络图，也可以填微信包内图片路径；为空则只分享文字。
-    public static readonly SHARE_CARD_IMAGE_URL = "";
+    // 兼容旧版单张分享图配置；SHARE_CARD_IMAGE_URLS 为空时才会使用这里。
+    public static readonly SHARE_CARD_IMAGE_URL = "https://mmocgame.qpic.cn/wechatgame/x9uQcl0cbzibeQVx8QwTdo8f9yPMIp1nlWqGRgwwbxL4kuvqRtVULEnGkzhrPuxrT/0";
+    // 分享卡片图片池，每次分享随机取一张；可填审核域名下的网络图，也可以填微信包内图片路径。
+    public static readonly SHARE_CARD_IMAGE_URLS:string[] = [
+        "https://mmocgame.qpic.cn/wechatgame/x9uQcl0cbzibeQVx8QwTdo8f9yPMIp1nlWqGRgwwbxL4kuvqRtVULEnGkzhrPuxrT/0",
+        "https://mmocgame.qpic.cn/wechatgame/x9uQcl0cbz96A3ibqgVlYgHCcJGjmXPJ28Q85ibppvWu358b92EcT9ziabAd3DFTalG/0",
+        "https://mmocgame.qpic.cn/wechatgame/x9uQcl0cbz81P4XywYpPYJPWicMlnXrNQlLib60IaarOnDgSwyniaRJw1aGlbjeMhnq/0",
+        "https://mmocgame.qpic.cn/wechatgame/x9uQcl0cbz9rbSvRmlTiaHVOtyWOmuc82fib28fcgZfBbXoyIVncaL3oobAFVGBwLn/0",
+        "https://mmocgame.qpic.cn/wechatgame/x9uQcl0cbzibH1xdUMpOtECnGY4vBP6V0FOTowicvI5ZkiahVlNCQCoBCAqkPiaU6PLx/0",
+    ];
     public static readonly SHARE_DAMAGE_TITLE = "我一剑打出{damage}伤害，来试试你的手气";
     public static readonly SHARE_DAMAGE_QUERY = "from=share&damage={damage}";
     public static readonly SHARE_TIMELINE_TITLE = "《就骰这亿把》今日挑战，看看你能闯到第几关";
@@ -18,53 +23,12 @@ export class ConstValue {
     public static readonly SHARE_HELP_QUERY = "from=help&stage={stage}";
     public static readonly SHARE_CHALLENGE_TITLE = "今日挑战已结束，来看看你的手气";
     public static readonly SHARE_CHALLENGE_QUERY = "from=challenge";
+    // 好友排行榜入口保持开启；如果后台隐私声明未完成，由开放数据域接口失败后显示“功能开发中”。
+    public static readonly ENABLE_FRIEND_RANK:boolean = true;
     // 微信后台「游戏圈」生成的游戏内跳转 ID；提审前在后台开启游戏圈后填入。
     public static readonly GAME_CIRCLE_OPEN_LINK = "";
-    // public static readonly SCREEN_HEIGHT = 1334;
-    // public static readonly SCREEN_WIDTH = 750;
-    // public static readonly ANGRY_TIME = 30;
-    // public static readonly ANGRY_UPDATE_INTERVAL = 3;
-    // public static readonly OFFLINE_UPDATE_INTERVAL = 10;
-    // public static readonly BUY_PER_RATE_1 = 1.07;
-    // public static readonly BUY_PER_RATE = 1.175;
-    // public static readonly SALE_BUY_RATE = 0.85;
-    // public static readonly SALE_MERGE_RATE = 0.8;
-    // public static readonly PLATFORM_UNIT_COUNT = 12;
-    // public static curLevel:number = 0;
-    // public static gridScaleX:number = 1.0;
-    // public static gridScaleY:number = 1.1;
-    // public static canTapSheep:boolean = true;
-    // public static CUR_TAP_COW_COUNT:number = 0;
-    // public static gamewin:boolean=false;
-    // public static gameOver:boolean=false;
-    // public static gamePause:boolean=false;
-    // public static gameMusicVolume:number = 1;
-    // public static gameSoundVolume:number = 1;
+    // 微信「评价与推荐」组件固定 OPENLINK 常量，按官方文档直接复制即可。
+    public static readonly RECOMMEND_OPEN_LINK = "TWFRCqV5WeM2AkMXhKwJ03MhfPOieJfAsvXKUbWvQFQtLyyA5etMPabBehga950uzfZcH3Vi3QeEh41xRGEVFw";
+    // 微信后台「擂台赛组件」生成的 openlink；后台配置完成后复制到这里。
+    public static readonly ARENA_OPEN_LINK = "";
 }
-// /**
-//  * 请求数据
-//  */
-// export class RequestData{
-//     id:number;
-//     type:string;
-
-//     constructor(id:number,type:string){
-//         this.id = id;
-//         this.type = type;
-//     }
-// }
-
-// /**
-//  * 响应/预设数据
-//  */
-// export class ResponseData{
-//     id:number;
-//     type:string;
-//     path:string;
-
-//     constructor(id:number,type:string,path:string){
-//         this.id=id;
-//         this.type = type;
-//         this.path = path;
-//     }
-// }

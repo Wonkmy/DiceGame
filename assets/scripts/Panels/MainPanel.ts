@@ -16,6 +16,8 @@ import DiceGameSave from "../GameCodes/DiceGameSave";
 import { Advertise } from "../GameCodes/Advertise";
 import HomePanel from "./HomePanel";
 import DebugTool from "../GameCodes/DebugTool";
+import ShareManager from "../GameCodes/ShareManager";
+import RecommendManager from "../GameCodes/RecommendManager";
 
 const {ccclass, property} = cc._decorator;
 
@@ -90,6 +92,12 @@ export default class MainPanel extends BaseUI {
     @property({type:cc.Node})
     btn_start:cc.Node = null!;
 
+    @property({type:cc.Node, displayName:"战斗分享按钮", tooltip:"战斗界面主动分享按钮；不拖拽则不启用"})
+    btn_share:cc.Node = null!;
+
+    @property({type:cc.Node, displayName:"战斗推荐评价按钮", tooltip:"战斗界面打开微信评价与推荐组件；不拖拽则不启用"})
+    btn_recommend:cc.Node = null!;
+
     @property({type:cc.Label})
     NumPointsText:cc.Label= null!;
     @property({type:cc.Label})
@@ -153,6 +161,8 @@ export default class MainPanel extends BaseUI {
     private monsterDataLoaded:boolean = false;
     private waitingLoadChapter:boolean = false;
     private freeRerollUsed:boolean = false;
+    private videoRerollUsed:boolean = false;
+    private watchingRerollVideo:boolean = false;
     private diceReadyForFreeReroll:boolean = false;
     private rerollBtnOriginColor:cc.Color = null!;
     private readonly FREE_REROLL_UNLOCK_STAGE:number = 4;
@@ -183,6 +193,7 @@ export default class MainPanel extends BaseUI {
     }
 
     override onShow(): void {
+        Advertise.hideBattleBanner();
         this.clearRuntimeStateForPanelShow();
         this.hideBattleWarningEffects();
         this.hideStageStartTips();
@@ -206,6 +217,14 @@ export default class MainPanel extends BaseUI {
             this.btn_onRoll.off(cc.Node.EventType.TOUCH_END,this.onReRoll,this);
             this.btn_onRoll.on(cc.Node.EventType.TOUCH_END,this.onReRoll,this);
             this.refreshFreeRerollBtnState();
+        }
+        if(this.btn_share){
+            this.btn_share.off(cc.Node.EventType.TOUCH_END, this.onShareGame, this);
+            this.btn_share.on(cc.Node.EventType.TOUCH_END, this.onShareGame, this);
+        }
+        if(this.btn_recommend){
+            this.btn_recommend.off(cc.Node.EventType.TOUCH_END, this.onOpenRecommend, this);
+            this.btn_recommend.on(cc.Node.EventType.TOUCH_END, this.onOpenRecommend, this);
         }
         this.createHomeBtn();
         if(CC_DEBUG){
@@ -246,6 +265,8 @@ export default class MainPanel extends BaseUI {
         this.battlleIn = false;
         this.onRollling = false;
         this.freeRerollUsed = false;
+        this.videoRerollUsed = false;
+        this.watchingRerollVideo = false;
         this.diceReadyForFreeReroll = false;
         this.hasUsedFixedDicePoints = false;
         this.firstGuideActive = false;
@@ -428,6 +449,7 @@ export default class MainPanel extends BaseUI {
         // 主动退出本局：已从主界面开始的挑战次数已经消耗；新用户首局不额外扣次数
         GameMain.instance.reportTodayChallengeResult();
         GameMain.instance.resetRunData();
+        Advertise.showBackHomeChapingByRate();
         UIManager.getInstance().closeUI(ChapterPanel);
         UIManager.getInstance().closeUI(MainPanel);
         UIManager.getInstance().openUI(HomePanel, 0, (ui: HomePanel) => {
@@ -468,7 +490,7 @@ export default class MainPanel extends BaseUI {
     }
     /**
      * 玩家主动弃骰重掷。
-     * 第4关开始每只怪只能用1次，只刷新桌面骰子，不触发攻击和怪物回合。
+     * 第4关开始每只怪先给1次免费重掷；老玩家免费用完后，可看一次激励视频再重掷。
      */
     onReRoll(){
         if(GameMain.gameFinished){
@@ -478,18 +500,59 @@ export default class MainPanel extends BaseUI {
             })
             return;
         }
-        if(!this.canUseFreeReroll()){
-            let tip:string = GameMain.instance.getChallengeStageScore() < this.FREE_REROLL_UNLOCK_STAGE ? "第4关开始可弃骰重掷" : "本关已重掷过";
-            GameMain.instance.showTip(tip);
-            this.refreshFreeRerollBtnState();
-            return;
-        }
         if(this.onRollling)return;
 
-        this.freeRerollUsed = true;
+        if(this.canUseFreeReroll()){
+            this.doRerollDices();
+            return;
+        }
+
+        if(this.canUseVideoReroll()){
+            this.tryVideoReroll();
+            return;
+        }
+
+        let tip:string = this.getRerollDisableTip();
+        GameMain.instance.showTip(tip);
         this.refreshFreeRerollBtnState();
+    }
+
+    /**
+     * 执行一次真正的弃骰重掷。
+     * 免费重掷和视频重掷都走这里，避免清理骰子状态的逻辑写两份。
+     */
+    private doRerollDices(){
+        this.freeRerollUsed = true;
         this.clearCurrentDicesForReroll();
         this.rollDicesOnce(0.15, this.createBalancedRerollPoints());
+    }
+
+    /**
+     * 激励视频重掷。
+     * 视频成功后立刻消耗当天重掷视频次数，并执行本局第二次重掷。
+     */
+    private tryVideoReroll(){
+        if(this.watchingRerollVideo)return;
+
+        this.watchingRerollVideo = true;
+        this.refreshFreeRerollBtnState();
+        Advertise.showVideoAd((result:number) => {
+            this.watchingRerollVideo = false;
+            if(result !== 1){
+                GameMain.instance.showTip(result === 2 ? "看完广告才能重掷" : "广告暂不可用");
+                this.refreshFreeRerollBtnState();
+                return;
+            }
+
+            if(!DiceGameSave.consumeDailyRerollVideoChance()){
+                GameMain.instance.showTip("今日广告重掷已用完");
+                this.refreshFreeRerollBtnState();
+                return;
+            }
+
+            this.videoRerollUsed = true;
+            this.doRerollDices();
+        });
     }
 
     /**
@@ -533,6 +596,35 @@ export default class MainPanel extends BaseUI {
     }
 
     /**
+     * 判断是否允许看激励视频重掷。
+     * 新手首轮流程不开放，避免前期按钮规则过重；回主页成为老玩家后才开放。
+     */
+    private canUseVideoReroll():boolean{
+        if(GameMain.gameFinished || this.battlleIn || this.onRollling || !this.monster)return false;
+        if(GameMain.instance.getChallengeStageScore() < this.FREE_REROLL_UNLOCK_STAGE)return false;
+        if(!this.freeRerollUsed || this.videoRerollUsed || this.watchingRerollVideo)return false;
+        if(GameMain.isNewUserChapterNameFlow)return false;
+        if(!this.diceReadyForFreeReroll)return false;
+        if(this.allDicesNodes.length < 5)return false;
+        if(DiceGameSave.getRemainDailyRerollVideoCount() <= 0)return false;
+
+        return true;
+    }
+
+    /**
+     * 获取重掷不可用时的提示文案。
+     * 文案只说明当前最主要原因，避免给玩家堆太多规则。
+     */
+    private getRerollDisableTip():string{
+        if(GameMain.instance.getChallengeStageScore() < this.FREE_REROLL_UNLOCK_STAGE)return "第4关开始可弃骰重掷";
+        if(GameMain.isNewUserChapterNameFlow && this.freeRerollUsed)return "本关已重掷过";
+        if(this.freeRerollUsed && this.videoRerollUsed)return "本关已重掷过";
+        if(this.freeRerollUsed && DiceGameSave.getRemainDailyRerollVideoCount() <= 0)return "今日广告重掷已用完";
+        if(!this.diceReadyForFreeReroll)return "骰子落定后才能重掷";
+        return "本关已重掷过";
+    }
+
+    /**
      * 刷新弃骰重掷按钮置灰状态。
      * 第1-3关、已使用、结算中都置灰；点击后仍由 onReRoll 做最终逻辑拦截。
      */
@@ -543,7 +635,8 @@ export default class MainPanel extends BaseUI {
             this.rerollBtnOriginColor = this.btn_onRoll.color;
         }
 
-        let canReroll:boolean = this.canUseFreeReroll();
+        let canReroll:boolean = this.canUseFreeReroll() || this.canUseVideoReroll();
+        this.refreshRerollBtnLabel();
         let btnComp:cc.Button = this.btn_onRoll.getComponent(cc.Button);
         if(canReroll){
             this.btn_onRoll.opacity = 255;
@@ -553,6 +646,25 @@ export default class MainPanel extends BaseUI {
             this.btn_onRoll.opacity = 120;
             this.btn_onRoll.color = cc.color(135, 135, 135, 255);
             if(btnComp)btnComp.interactable = false;
+        }
+    }
+
+    /**
+     * 根据当前重掷状态刷新按钮文字。
+     * 如果按钮没有 txt 文本节点，则只改置灰状态，不强依赖预制体结构。
+     */
+    private refreshRerollBtnLabel(){
+        if(!this.btn_onRoll)return;
+
+        let txtNode:cc.Node = this.btn_onRoll.getChildByName("txt");
+        if(!txtNode || !txtNode.getComponent(cc.Label))return;
+
+        if(this.canUseFreeReroll()){
+            txtNode.getComponent(cc.Label).string = "重掷";
+        }else if(this.canUseVideoReroll()){
+            txtNode.getComponent(cc.Label).string = "看广告重掷";
+        }else{
+            txtNode.getComponent(cc.Label).string = "重掷";
         }
     }
 
@@ -733,6 +845,22 @@ export default class MainPanel extends BaseUI {
             }, false);
         },0.2);
 
+    }
+
+    /**
+     * 战斗界面主动分享。
+     * 只触发微信分享，不改挑战次数、复活次数和战斗状态。
+     */
+    private onShareGame(){
+        ShareManager.shareFromScene("battle_share");
+    }
+
+    /**
+     * 战斗界面打开评价与推荐。
+     * 微信能力判断在 RecommendManager 内部处理，避免战斗界面直接依赖 wx API。
+     */
+    private onOpenRecommend(){
+        RecommendManager.openRecommend();
     }
 
     switchHandType(type:string){
@@ -1443,9 +1571,12 @@ export default class MainPanel extends BaseUI {
     }
 
     openBattle(nodeData:Chapter){
+        Advertise.hideBattleBanner();
         this.currentNodeData = nodeData;
         this.hasUsedFixedDicePoints = false;
         this.freeRerollUsed = false;
+        this.videoRerollUsed = false;
+        this.watchingRerollVideo = false;
         this.diceReadyForFreeReroll = false;
         this.refreshFreeRerollBtnState();
         // 进入新战斗先清掉上一关的危险提示，等新怪物加载完成后再按当前怪物重新判断。
@@ -1502,7 +1633,9 @@ export default class MainPanel extends BaseUI {
         }
         this.monster = null!;
         monster.node.destroy();
-        Advertise.showChapingAd();
+        // 旧逻辑：击杀怪物后必出插屏。
+        // Advertise.showChapingAd();
+        // 现在改为 ResultPanel.onShow 里按结算广告策略独立随机横幅和插屏。
 
         this.openResultPanel();
     }
@@ -2203,6 +2336,12 @@ export default class MainPanel extends BaseUI {
         }
         if(this.btn_onRoll){
             this.btn_onRoll.off(cc.Node.EventType.TOUCH_END,this.onReRoll,this);
+        }
+        if(this.btn_share){
+            this.btn_share.off(cc.Node.EventType.TOUCH_END, this.onShareGame, this);
+        }
+        if(this.btn_recommend){
+            this.btn_recommend.off(cc.Node.EventType.TOUCH_END, this.onOpenRecommend, this);
         }
         this.calculateData = null!;
         this.selectedDicePoint = [];

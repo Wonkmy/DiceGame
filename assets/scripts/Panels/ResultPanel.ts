@@ -9,6 +9,10 @@ import DiceGameSave from "../GameCodes/DiceGameSave";
 import ShareManager from "../GameCodes/ShareManager";
 import HomePanel from "./HomePanel";
 import TipPanel from "./TipPanel";
+import RecommendManager from "../GameCodes/RecommendManager";
+import ArenaManager from "../GameCodes/ArenaManager";
+import { Advertise } from "../GameCodes/Advertise";
+import SubscribeSystemMessageManager from "../GameCodes/SubscribeSystemMessageManager";
 const {ccclass, property} = cc._decorator;
 
 @ccclass
@@ -29,6 +33,12 @@ export default class ResultPanel extends BaseUI{
 
     @property({type:cc.Node, displayName:"查看详情按钮", tooltip:"点击后查看排名、次数、地区等详细结算信息"})
     btn_detail:cc.Node = null!;
+
+    @property({type:cc.Node, displayName:"推荐评价按钮", tooltip:"点击后打开微信评价与推荐组件；不拖拽则不启用"})
+    btn_recommend:cc.Node = null!;
+
+    @property({type:cc.Node, displayName:"擂台赛按钮", tooltip:"点击后打开微信擂台赛组件；不拖拽则不启用"})
+    btn_arena:cc.Node = null!;
 
     @property({type:cc.Node, displayName:"首胜艺术字节点", tooltip:"第1关胜利时显示的首胜艺术字图片节点"})
     firstWinArtNode:cc.Node = null!;
@@ -76,6 +86,7 @@ export default class ResultPanel extends BaseUI{
     override onShow(): void {
         this.nextTransitioning = false;
         this.node.opacity = 255;
+        Advertise.showResultAdsByRate(GameMain.gameResultType, GameMain.instance.getChallengeStageScore());
         this.restorePanelChildrenOpacity();
         if(this.btn_next){
             this.btn_next.resumeSystemEvents(true);
@@ -93,6 +104,14 @@ export default class ResultPanel extends BaseUI{
         if(this.btn_detail){
             this.btn_detail.off(cc.Node.EventType.TOUCH_END,this.onShowDetail,this);
             this.btn_detail.on(cc.Node.EventType.TOUCH_END,this.onShowDetail,this);
+        }
+        if(this.btn_recommend){
+            this.btn_recommend.off(cc.Node.EventType.TOUCH_END,this.onOpenRecommend,this);
+            this.btn_recommend.on(cc.Node.EventType.TOUCH_END,this.onOpenRecommend,this);
+        }
+        if(this.btn_arena){
+            this.btn_arena.off(cc.Node.EventType.TOUCH_END,this.onOpenArena,this);
+            this.btn_arena.on(cc.Node.EventType.TOUCH_END,this.onOpenArena,this);
         }
         this.refreshResultShow();
 
@@ -173,8 +192,33 @@ export default class ResultPanel extends BaseUI{
         // 现在主区域只显示本局战报，其它信息统一放到“查看详情”。
         titleLabel.string = resultText;
         titleLabel.node.off(cc.Node.EventType.TOUCH_END, ShareManager.shareBestDamage, ShareManager);
-        titleLabel.node.on(cc.Node.EventType.TOUCH_END, ShareManager.shareBestDamage, ShareManager);
+        titleLabel.node.off(cc.Node.EventType.TOUCH_END, this.onShareResult, this);
+        titleLabel.node.on(cc.Node.EventType.TOUCH_END, this.onShareResult, this);
         this.playResultFeedbackAnim(titleLabel.node);
+    }
+
+    /**
+     * 结算页点击战报主动分享。
+     * 只区分分享来源，不改变结算和重开逻辑。
+     */
+    private onShareResult(){
+        ShareManager.shareFromScene("result_share");
+    }
+
+    /**
+     * 结算页打开微信评价与推荐。
+     * 适合在胜利或失败后引导玩家给推荐，不影响继续挑战。
+     */
+    private onOpenRecommend(){
+        RecommendManager.openRecommend();
+    }
+
+    /**
+     * 结算页打开微信擂台赛组件。
+     * 适合玩家结算后顺手进入活动，不影响下一关和重开流程。
+     */
+    private onOpenArena(){
+        ArenaManager.openArena();
     }
 
     private showShareHelpBtn(show:boolean){
@@ -731,6 +775,8 @@ export default class ResultPanel extends BaseUI{
         }
 
         this.sharingHelp = true;
+        // 玩家主动求助时，顺手订阅好友互动提醒；订阅结果不影响分享复活流程。
+        SubscribeSystemMessageManager.requestInteractiveSubscribe();
         ShareManager.shareHelp(GameMain.instance.getChallengeStageScore(), () => {
             this.sharingHelp = false;
             this.restartGame();
@@ -944,6 +990,7 @@ export default class ResultPanel extends BaseUI{
         // 回主界面不再额外扣次数，挑战次数统一在开局或重新挑战时扣
         GameMain.instance.reportTodayChallengeResult();
         GameMain.instance.resetRunData();
+        Advertise.showBackHomeChapingByRate();
         UIManager.getInstance().closeUI(MainPanel);
         UIManager.getInstance().closeUI(ResultPanel);
         UIManager.getInstance().openUI(HomePanel, 0, (ui: HomePanel) => {
@@ -967,6 +1014,7 @@ export default class ResultPanel extends BaseUI{
         let titleNode = this.node.getChildByName("task");
         if(titleNode && cc.isValid(titleNode)){
             titleNode.off(cc.Node.EventType.TOUCH_END, ShareManager.shareBestDamage, ShareManager);
+            titleNode.off(cc.Node.EventType.TOUCH_END, this.onShareResult, this);
         }
         if(this.btn_shareHelp && cc.isValid(this.btn_shareHelp)){
             this.btn_shareHelp.off(cc.Node.EventType.TOUCH_END, this.onShareHelp, this);
@@ -976,6 +1024,12 @@ export default class ResultPanel extends BaseUI{
         }
         if(this.btn_detail && cc.isValid(this.btn_detail)){
             this.btn_detail.off(cc.Node.EventType.TOUCH_END, this.onShowDetail, this);
+        }
+        if(this.btn_recommend && cc.isValid(this.btn_recommend)){
+            this.btn_recommend.off(cc.Node.EventType.TOUCH_END, this.onOpenRecommend, this);
+        }
+        if(this.btn_arena && cc.isValid(this.btn_arena)){
+            this.btn_arena.off(cc.Node.EventType.TOUCH_END, this.onOpenArena, this);
         }
     }
 }

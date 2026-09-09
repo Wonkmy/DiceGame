@@ -8,6 +8,11 @@ import DiceGameSave from "../GameCodes/DiceGameSave";
 import DebugTool from "../GameCodes/DebugTool";
 import RankPanel from "./RankPanel";
 import GameCircleManager from "../GameCodes/GameCircleManager";
+import RecommendManager from "../GameCodes/RecommendManager";
+import ArenaManager from "../GameCodes/ArenaManager";
+import { Advertise } from "../GameCodes/Advertise";
+import SubscribeSystemMessageManager from "../GameCodes/SubscribeSystemMessageManager";
+import { ConstValue } from "../Global/ConstValue";
 
 const {ccclass, property} = cc._decorator;
 
@@ -17,6 +22,7 @@ export default class HomePanel extends BaseUI {
     protected static className = "HomePanel";
     private isSharingChallenge:boolean = false;
     private startingChallenge:boolean = false;
+    private watchingChallengeVideo:boolean = false;
 
     @property({type:cc.Label, displayName:"标题文本", tooltip:"主界面顶部显示的游戏标题文本"})
     titleLabel:cc.Label = null!;
@@ -42,12 +48,20 @@ export default class HomePanel extends BaseUI {
     @property({type:cc.Node, displayName:"游戏圈按钮", tooltip:"点击后打开微信游戏圈；仅微信小游戏环境有效"})
     btn_gameCircle:cc.Node = null!;
 
+    @property({type:cc.Node, displayName:"推荐评价按钮", tooltip:"点击后打开微信评价与推荐组件；仅微信小游戏环境有效"})
+    btn_recommend:cc.Node = null!;
+
+    @property({type:cc.Node, displayName:"擂台赛按钮", tooltip:"点击后打开微信擂台赛组件；仅微信小游戏环境有效"})
+    btn_arena:cc.Node = null!;
+
     onLoad(): void {
         HomePanel.instance = this;
     }
 
     override onShow(): void {
         this.startingChallenge = false;
+        this.watchingChallengeVideo = false;
+        Advertise.showBannerForNormalPanel();
         this.bindHomeBtns();
         this.refreshStartView();
         if(CC_DEBUG){
@@ -79,6 +93,16 @@ export default class HomePanel extends BaseUI {
         if(this.btn_gameCircle){
             this.btn_gameCircle.off(cc.Node.EventType.TOUCH_END, this.openGameCircle, this);
             this.btn_gameCircle.on(cc.Node.EventType.TOUCH_END, this.openGameCircle, this);
+        }
+
+        if(this.btn_recommend){
+            this.btn_recommend.off(cc.Node.EventType.TOUCH_END, this.openRecommend, this);
+            this.btn_recommend.on(cc.Node.EventType.TOUCH_END, this.openRecommend, this);
+        }
+
+        if(this.btn_arena){
+            this.btn_arena.off(cc.Node.EventType.TOUCH_END, this.openArena, this);
+            this.btn_arena.on(cc.Node.EventType.TOUCH_END, this.openArena, this);
         }
 
         // 旧版是按节点名自动查找和动态创建主界面内容；现在改为 Creator 面板拖拽变量。
@@ -128,8 +152,10 @@ export default class HomePanel extends BaseUI {
         if(DiceGameSave.getRemainDailyChallengeCount() <= 0){
             if(DiceGameSave.getRemainDailyShareChallengeCount() > 0){
                 this.shareAddChallenge();
+            }else if(DiceGameSave.getRemainDailyVideoChallengeCount() > 0){
+                this.videoAddChallenge();
             }else{
-                ShareManager.shareBestDamage();
+                GameMain.instance.showTip("今日机会已用完，明日再战！");
             }
             return;
         }
@@ -191,9 +217,45 @@ export default class HomePanel extends BaseUI {
             label.string = "开始挑战";
         }else if(remainShareChallenge > 0){
             label.string = "好友助战";
+        }else if(DiceGameSave.getRemainDailyVideoChallengeCount() > 0){
+            label.string = "看广告再战";
         }else{
-            label.string = "分享战绩";
+            label.string = "明日再战";
         }
+    }
+
+    /**
+     * 普通次数和好友助战都用完后，通过激励视频补 1 次挑战。
+     * 当天只允许一次，成功后立刻消耗这次机会进入挑战。
+     */
+    private videoAddChallenge(){
+        if(this.watchingChallengeVideo)return;
+
+        this.watchingChallengeVideo = true;
+        Advertise.showVideoAd((result:number) => {
+            this.watchingChallengeVideo = false;
+            if(result !== 1){
+                GameMain.instance.showTip(result === 2 ? "看完广告才能获得机会" : "广告暂不可用");
+                this.refreshStartView();
+                return;
+            }
+
+            if(!DiceGameSave.consumeDailyVideoChallengeChance()){
+                GameMain.instance.showTip("今日广告机会已用完");
+                this.refreshStartView();
+                return;
+            }
+
+            DiceGameSave.addDailyChallengeChance(1);
+            if(!DiceGameSave.consumeDailyChallengeChance()){
+                GameMain.instance.showTip("今日挑战次数已用完，明日再战！");
+                this.refreshStartView();
+                return;
+            }
+
+            this.refreshStartView();
+            this.startGame();
+        });
     }
 
     private refreshShareBtnText(){
@@ -209,6 +271,13 @@ export default class HomePanel extends BaseUI {
     }
 
     private openRankPanel(){
+        if(!ConstValue.ENABLE_FRIEND_RANK){
+            GameMain.instance.showTip("功能开发中");
+            return;
+        }
+
+        // 玩家主动打开排行榜时，顺手订阅好友超越提醒；失败不影响排行榜本身。
+        SubscribeSystemMessageManager.requestRankSubscribe();
         UIManager.getInstance().openUI(RankPanel, 2, (ui: RankPanel) => {
             ui.onShow();
         });
@@ -227,7 +296,23 @@ export default class HomePanel extends BaseUI {
      * 用具名函数绑定，避免 HomePanel 重复 onShow 时按钮事件叠加。
      */
     private onShareBestDamage(){
-        ShareManager.shareBestDamage();
+        ShareManager.shareFromScene("home_share");
+    }
+
+    /**
+     * 打开微信评价与推荐组件。
+     * 这里只绑定主界面按钮，平台判断和异常处理统一放到 RecommendManager。
+     */
+    private openRecommend(){
+        RecommendManager.openRecommend();
+    }
+
+    /**
+     * 打开微信擂台赛组件。
+     * 首页只负责入口，具体平台能力和后台 openlink 判断交给 ArenaManager。
+     */
+    private openArena(){
+        ArenaManager.openArena();
     }
 
     /**
@@ -246,6 +331,7 @@ export default class HomePanel extends BaseUI {
         this.startingChallenge = true;
         // 先重置挑战数据，再打开战斗界面，避免 MainPanel.onShow 读取到上一局残留关卡或状态。
         GameMain.instance.resetRunData();
+        Advertise.hideBattleBanner();
         UIManager.getInstance().closeUI(HomePanel);
         UIManager.getInstance().openUI(MainPanel,0,(ui:MainPanel)=>{
             ui.onShow();
@@ -272,6 +358,12 @@ export default class HomePanel extends BaseUI {
         }
         if(this.btn_gameCircle){
             this.btn_gameCircle.off(cc.Node.EventType.TOUCH_END, this.openGameCircle, this);
+        }
+        if(this.btn_recommend){
+            this.btn_recommend.off(cc.Node.EventType.TOUCH_END, this.openRecommend, this);
+        }
+        if(this.btn_arena){
+            this.btn_arena.off(cc.Node.EventType.TOUCH_END, this.openArena, this);
         }
         HomePanel.instance = null!;
     }

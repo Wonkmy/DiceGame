@@ -7,6 +7,8 @@ import Player from "./GameCodes/Player";
 import DiceGameSave from "./GameCodes/DiceGameSave";
 import ShareManager from "./GameCodes/ShareManager";
 import { Advertise } from "./GameCodes/Advertise";
+import RecommendManager from "./GameCodes/RecommendManager";
+import SubscribeSystemMessageManager from "./GameCodes/SubscribeSystemMessageManager";
 
 declare const wx: any;
 const {ccclass, property} = cc._decorator;
@@ -52,6 +54,8 @@ export default class GameMain extends cc.Component {
         GameMain.curWinStreak = 0;
         ShareManager.initShareMenu();
         Advertise.init();
+        RecommendManager.preload();
+        SubscribeSystemMessageManager.tryReportHelpInteractiveFromLaunch();
 
         cc.assetManager.loadBundle("diceRougeArt",null!,(err,_bundle)=>{
                 this.bundle = _bundle
