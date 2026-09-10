@@ -18,6 +18,7 @@ import HomePanel from "./HomePanel";
 import DebugTool from "../GameCodes/DebugTool";
 import ShareManager from "../GameCodes/ShareManager";
 import RecommendManager from "../GameCodes/RecommendManager";
+import { ConstValue } from "../Global/ConstValue";
 
 const {ccclass, property} = cc._decorator;
 
@@ -576,6 +577,10 @@ export default class MainPanel extends BaseUI {
     public autoRollDices(delay:number = 1){
         if(GameMain.gameFinished || !this.monster)return;
 
+        // 每回合重发满骰和重掷一样从第4关开始，避免影响前3关教学节奏。
+        if(ConstValue.ALWAYS_ROLL_FULL_DICES_EACH_TURN && GameMain.instance.getChallengeStageScore() >= this.FREE_REROLL_UNLOCK_STAGE && this.allDicesNodes.length > 0){
+            this.clearCurrentDicesForReroll();
+        }
         this.rollDicesOnce(delay);
     }
 
@@ -1677,6 +1682,10 @@ export default class MainPanel extends BaseUI {
         GameMain.instance.reportBestStage(DiceGameSave.getBestStage());
         GameMain.instance.reportChallengeRank(DiceGameSave.getTodayBestStage());
         GameMain.gameResultType = this.currentNodeData && this.currentNodeData.type === "boss" ? "chapterWin" : "stageWin";
+        if(GameMain.gameResultType === "chapterWin" && GameMain.curChapterIndex < 1){
+            // 击杀章节 Boss 时立即解锁下一章，避免玩家不点下一关直接回主页导致进度没保存。
+            DiceGameSave.unlockChapter(GameMain.curChapterIndex + 1);
+        }
         GameMain.instance.addWinStreak();
         if(this.firstGuideActive){
             // 首局第一个怪击杀后结束引导，之后不再反复打扰玩家。

@@ -175,13 +175,14 @@
             "id": "m013",
             "name": "巨口吞噬者",
             "stage": 2,
-            "hp": 178,
-            "shiled": 8,
-            "attack": 37,
+            "hp": 220,
+            "shiled": 10,
+            "attack": 42,
             "gold": 14,
             "behaviorData": {
                 "type": "multi",
-                "des": "每回合恢复已损生命8%",
+                "des": "每回合攻击+5、恢复已损生命8%",
+                "attackValue": 5,
                 "healLostRate": 0.08
             },
             "asset": "m013_big_mouth"
@@ -237,14 +238,15 @@
             "id": "m017",
             "name": "裂翼蝠王",
             "stage": 2,
-            "hp": 210,
-            "shiled": 8,
-            "attack": 40,
+            "hp": 270,
+            "shiled": 12,
+            "attack": 48,
             "gold": 15,
             "behaviorData": {
                 "type": "multi",
-                "des": "每回合攻击+6",
-                "attackValue": 6
+                "des": "每回合攻击+6、护盾+2",
+                "attackValue": 6,
+                "shiledValue": 2
             },
             "asset": "m017_split_wing_bat_king"
         },
@@ -252,16 +254,16 @@
             "id": "m018",
             "name": "重甲骨卫",
             "stage": 2,
-            "hp": 228,
-            "shiled": 11,
-            "attack": 41,
+            "hp": 295,
+            "shiled": 14,
+            "attack": 50,
             "gold": 16,
             "behaviorData": {
                 "type": "multi",
-                "des": "每回合攻击+3、护盾+3、恢复已损生命5%",
-                "attackValue": 3,
+                "des": "每回合攻击+5、护盾+3、恢复已损生命6%",
+                "attackValue": 5,
                 "shiledValue": 3,
-                "healLostRate": 0.05
+                "healLostRate": 0.06
             },
             "asset": "m018_heavy_bone_guard"
         },
@@ -269,14 +271,15 @@
             "id": "m019",
             "name": "深渊毒核",
             "stage": 2,
-            "hp": 246,
-            "shiled": 10,
-            "attack": 43,
+            "hp": 325,
+            "shiled": 15,
+            "attack": 51,
             "gold": 18,
             "behaviorData": {
                 "type": "multi",
-                "des": "每回合攻击+5、恢复已损生命9%",
-                "attackValue": 5,
+                "des": "每回合攻击+6、护盾+2、恢复已损生命9%",
+                "attackValue": 6,
+                "shiledValue": 2,
                 "healLostRate": 0.09
             },
             "asset": "m019_abyss_poison_core"
@@ -285,16 +288,17 @@
             "id": "m020",
             "name": "深渊领主",
             "stage": 2,
-            "hp": 285,
-            "shiled": 12,
-            "attack": 47,
+            "hp": 360,
+            "shiled": 16,
+            "attack": 52,
             "gold": 25,
             "behaviorData": {
                 "type": "multi",
-                "des": "每回合攻击+9、护盾+2、恢复已损生命8%",
-                "attackValue": 9,
-                "shiledValue": 2,
-                "healLostRate": 0.08
+                "des": "每回合攻击2次、攻击+7、护盾+3、恢复已损生命10%",
+                "double_enable": true,
+                "attackValue": 7,
+                "shiledValue": 3,
+                "healLostRate": 0.1
             },
             "asset": "m020_abyss_lord"
         }

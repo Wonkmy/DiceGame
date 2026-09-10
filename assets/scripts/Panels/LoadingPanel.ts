@@ -51,6 +51,9 @@ export default class LoadingPanel extends BaseUI {
                 DiceGameSave.markNewUserAutoPlayed();
                 // 先重置挑战数据，再打开战斗界面，避免 MainPanel.onShow 读取旧进度。
                 GameMain.instance.resetRunData();
+                // 新用户首次自动进入必须固定从第1章第1关开始，不读取已解锁章节。
+                GameMain.curChapterIndex = 0;
+                GameMain.curStageIndex = 0;
                 GameMain.isNewUserFirstPlay = true;
                 // 新用户首次自动进入后的本轮挑战和失败重试，章节预告页继续显示“新手章节”。
                 GameMain.isNewUserChapterNameFlow = true;

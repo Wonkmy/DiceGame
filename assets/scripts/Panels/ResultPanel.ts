@@ -130,6 +130,7 @@ export default class ResultPanel extends BaseUI{
 
         let titleLabel = this.node.getChildByName("task").getComponent(cc.Label);
         let btnLabel = this.btn_next.getChildByName("nextLevel").getComponent(cc.Label);
+        this.btn_next.active = true;
         let resultText = "";
         let stageScore:number = GameMain.instance.getChallengeStageScore();
         let chapterName:string = this.getResultChapterName();
@@ -159,11 +160,13 @@ export default class ResultPanel extends BaseUI{
         }else if(GameMain.gameResultType === "chapterWin"){
             FaynUtils.PlayMusic("victory",false,1);
             if(GameMain.curChapterIndex >= 1){
-                resultText = "全部通关\n今日封顶";
-                btnLabel.string = "再来一局";
+                resultText = "本次挑战通关";
+                // 第2章通关就是本版挑战终点，只保留回主页，避免玩家继续点下一关造成流程误导。
+                this.btn_next.active = false;
             }else{
                 resultText = "章节通关\n进入深渊";
                 btnLabel.string = "进入深渊章节";
+                this.btn_next.active = true;
                 this.showChapterWinArt(true);
                 this.playNextBtnAnim();
             }
@@ -872,6 +875,8 @@ export default class ResultPanel extends BaseUI{
         }else if(GameMain.gameResultType === "chapterWin" && GameMain.curChapterIndex < 1){
             GameMain.curChapterIndex++;
             GameMain.curStageIndex = 0;
+            // 章节通关进入下一章时立刻落存档，失败重开或回主页再进都从新章节开始。
+            DiceGameSave.unlockChapter(GameMain.curChapterIndex);
         }else{
             if(!DiceGameSave.consumeDailyChallengeChance()){
                 GameMain.instance.showTip("今日挑战次数已用完，明日再战！");

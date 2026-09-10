@@ -7,6 +7,7 @@ export default class DiceGameSave {
     static readonly MAX_DAILY_SHARE_CHALLENGE_COUNT:number = 1;
     static readonly MAX_DAILY_VIDEO_CHALLENGE_COUNT:number = 1;
     static readonly MAX_DAILY_REROLL_VIDEO_COUNT:number = 20;
+    private static readonly MAX_UNLOCKED_CHAPTER_INDEX:number = 1;
     private static readonly BEST_DAMAGE_KEY = "dice_best_damage";
     private static readonly BEST_STAGE_KEY = "dice_best_stage";
     private static readonly TOTAL_KILL_KEY = "dice_total_kill";
@@ -22,6 +23,7 @@ export default class DiceGameSave {
     private static readonly FIRST_GUIDE_DONE_KEY = "dice_first_guide_done";
     private static readonly FIRST_FAIL_HELP_GUIDE_KEY = "dice_first_fail_help_guide";
     private static readonly FIRST_WIN_SHOW_KEY = "dice_first_win_show";
+    private static readonly UNLOCKED_CHAPTER_KEY = "dice_unlocked_chapter";
 
     static resetCurrentGame() {
         this.currentMaxDamage = 0;
@@ -60,6 +62,24 @@ export default class DiceGameSave {
 
     static getBestStage(): number {
         return Number(cc.sys.localStorage.getItem(this.BEST_STAGE_KEY)) || 0;
+    }
+
+    static getUnlockedChapterIndex():number{
+        let saveChapter:number = Number(cc.sys.localStorage.getItem(this.UNLOCKED_CHAPTER_KEY)) || 0;
+        // 兼容旧存档：如果以前已经打到第11关及以后，但还没有章节存档，自动解锁第2章。
+        if(saveChapter <= 0 && this.getBestStage() >= 11){
+            saveChapter = 1;
+            cc.sys.localStorage.setItem(this.UNLOCKED_CHAPTER_KEY, String(saveChapter));
+        }
+
+        return Math.max(0, Math.min(saveChapter, this.MAX_UNLOCKED_CHAPTER_INDEX));
+    }
+
+    static unlockChapter(chapterIndex:number){
+        let safeChapter:number = Math.max(0, Math.min(chapterIndex, this.MAX_UNLOCKED_CHAPTER_INDEX));
+        if(safeChapter > this.getUnlockedChapterIndex()){
+            cc.sys.localStorage.setItem(this.UNLOCKED_CHAPTER_KEY, String(safeChapter));
+        }
     }
 
     static getTotalKill(): number {
@@ -247,6 +267,7 @@ export default class DiceGameSave {
         cc.sys.localStorage.removeItem(this.FIRST_GUIDE_DONE_KEY);
         cc.sys.localStorage.removeItem(this.FIRST_FAIL_HELP_GUIDE_KEY);
         cc.sys.localStorage.removeItem(this.FIRST_WIN_SHOW_KEY);
+        cc.sys.localStorage.removeItem(this.UNLOCKED_CHAPTER_KEY);
         this.resetCurrentGame();
     }
 

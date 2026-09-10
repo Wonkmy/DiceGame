@@ -2,6 +2,8 @@ export class ConstValue {
     public static readonly CONFIG_FILE_DIR = "config/";
     public static readonly PREFAB_UI_DIR = "prefab/ui/";
     public static readonly AUDIO_DIR = "audio/";
+    // 是否每个玩家新回合都清空旧骰子并重新发满5个；false 时保持旧逻辑，只补充已消耗的骰子。
+    public static readonly ALWAYS_ROLL_FULL_DICES_EACH_TURN:boolean = false;
 
     public static readonly SHARE_RESULT_TITLE = "我今天冲到第{stage}关，来试试你能到第几关";
     public static readonly SHARE_RESULT_QUERY = "from=share&stage={stage}&damage={damage}";

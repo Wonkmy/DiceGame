@@ -130,7 +130,8 @@ export default class GameMain extends cc.Component {
     }
 
     resetRunData(){
-        GameMain.curChapterIndex = 0;
+        // 普通挑战从已解锁章节的第1关开始，不再永远回到第1章。
+        GameMain.curChapterIndex = DiceGameSave.getUnlockedChapterIndex();
         GameMain.curStageIndex = 0;
         GameMain.gameFinished = false;
         GameMain.gameResultType = "stageWin";
