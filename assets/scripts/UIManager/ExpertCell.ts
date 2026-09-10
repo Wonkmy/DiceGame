@@ -28,7 +28,7 @@ export default class ExpertCell extends cc.Component {
 
     private onClickUseExpert() {
         console.log("onClickUseExpert");
-        FaynUtils.PlayMusic("btnclick",false,1);
+        FaynUtils.PlayMusic("ui_button_click",false,1);
         cc.game.emit("on_use_expert", this.expertDef);
     }
 }

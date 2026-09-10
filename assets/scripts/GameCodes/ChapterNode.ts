@@ -10,6 +10,7 @@ import GameMain from "../GameMain";
 import ChapterPanel from "../Panels/ChapterPanel";
 import MainPanel from "../Panels/MainPanel";
 import { UIManager } from "../UIManager/UIManager";
+import { FaynUtils } from "../Global/FaynUtils";
 
 const {ccclass, property} = cc._decorator;
 
@@ -36,6 +37,7 @@ export default class ChapterNode extends cc.Component {
             return;
         }
 
+        FaynUtils.PlayMusic("chapter_card_click", false, 1);
         // 点击后立刻锁住卡片，防止手机连点造成重复领奖、重复开战或跳关。
         this.clicked = true;
         cc.Tween.stopAllByTarget(this.node);

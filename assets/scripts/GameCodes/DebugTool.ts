@@ -128,12 +128,14 @@ export default class DebugTool {
         UIManager.getInstance().closeUI(LoadingPanel);
         UIManager.getInstance().closeUI(MainPanel);
 
-        UIManager.getInstance().openUI(MainPanel, 0, (ui:MainPanel) => {
-            ui.onShow();
-            ui.scheduleOnce(() => {
-                this.enterCurNode(ui);
-            }, 0.25);
-        });
+        GameMain.instance.scheduleOnce(() => {
+            UIManager.getInstance().openUI(MainPanel, 0, (ui:MainPanel) => {
+                ui.onShow();
+                ui.scheduleOnce(() => {
+                    this.enterCurNode(ui);
+                }, 0.25);
+            });
+        }, 0.2);
     }
 
     private static enterCurNode(mainPanel:MainPanel){
@@ -168,9 +170,11 @@ export default class DebugTool {
         if(MainPanel.instance){
             MainPanel.instance.openResultPanel();
         }else{
-            UIManager.getInstance().openUI(ResultPanel, 0, (ui:ResultPanel) => {
-                ui.onShow();
-            });
+            GameMain.instance.scheduleOnce(() => {
+                UIManager.getInstance().openUI(ResultPanel, 0, (ui:ResultPanel) => {
+                    ui.onShow();
+                });
+            }, 0.2);
         }
     }
 

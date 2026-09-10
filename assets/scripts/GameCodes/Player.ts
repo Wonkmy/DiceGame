@@ -57,6 +57,7 @@ export default class Player extends cc.Component {
 
         this.curHP = this.totalHp;
         this.hpText.string = String(this.curHP);
+        MainPanel.instance.refreshBattleWarningEffects();
     }
 
     /**

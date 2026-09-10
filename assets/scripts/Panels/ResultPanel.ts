@@ -143,6 +143,7 @@ export default class ResultPanel extends BaseUI{
         this.showDetailBtn(true);
 
         if(GameMain.gameResultType === "fail"){
+            FaynUtils.PlayMusic("defeat",false,1);
             this.showFailArt(true);
             this.showFirstFailHelpGuide = !DiceGameSave.hasShowFirstFailHelpGuide() && DiceGameSave.getRemainDailyShareHelpCount() > 0;
             if(this.showFirstFailHelpGuide){
@@ -156,6 +157,7 @@ export default class ResultPanel extends BaseUI{
             this.showShareHelpBtn(true);
             this.showFailReview(true, this.getFailReviewText());
         }else if(GameMain.gameResultType === "chapterWin"){
+            FaynUtils.PlayMusic("victory",false,1);
             if(GameMain.curChapterIndex >= 1){
                 resultText = "全部通关\n今日封顶";
                 btnLabel.string = "再来一局";
@@ -170,6 +172,7 @@ export default class ResultPanel extends BaseUI{
             this.showFailReview(false);
             this.showWinStreak(GameMain.curWinStreak >= 2);
         }else{
+            FaynUtils.PlayMusic("victory",false,1);
             // 首胜艺术字只显示一次；后续再打第1关胜利，走普通胜利反馈。
             if(stageScore === 1 && !DiceGameSave.hasShowFirstWin()){
                 DiceGameSave.markFirstWinShow();
@@ -861,7 +864,7 @@ export default class ResultPanel extends BaseUI{
     private onNextTurn(){
         if(this.nextTransitioning)return;
 
-        FaynUtils.PlayMusic("btnclick",false,1);
+        FaynUtils.PlayMusic("ui_button_click",false,1);
 
         let needNextTransition:boolean = GameMain.gameResultType === "stageWin" || (GameMain.gameResultType === "chapterWin" && GameMain.curChapterIndex < 1);
         if(GameMain.gameResultType === "stageWin"){
@@ -897,13 +900,15 @@ export default class ResultPanel extends BaseUI{
         this.stopResultFeedbackAnim();
         this.stopShareHelpBtnGuideLoop();
         UIManager.getInstance().closeUI(MainPanel);
-        UIManager.getInstance().closeUI(ResultPanel);
-        UIManager.getInstance().openUI(MainPanel, 0, (ui: MainPanel) => {
-            ui.onShow();
-            if(GameMain.curStageIndex === 0){
-                GameMain.instance.player.getDices();
-            }
-        })
+        this.scheduleOnce(() => {
+            UIManager.getInstance().openUI(MainPanel, 0, (ui: MainPanel) => {
+                ui.onShow();
+                if(GameMain.curStageIndex === 0){
+                    GameMain.instance.player.getDices();
+                }
+                UIManager.getInstance().closeUI(ResultPanel);
+            })
+        }, 0.2);
     }
 
     /**
@@ -994,16 +999,18 @@ export default class ResultPanel extends BaseUI{
         GameMain.instance.resetRunData();
         Advertise.showBackHomeChapingByRate();
         UIManager.getInstance().closeUI(MainPanel);
-        UIManager.getInstance().closeUI(ResultPanel);
-        UIManager.getInstance().openUI(HomePanel, 0, (ui: HomePanel) => {
-            ui.onShow();
-        })
+        this.scheduleOnce(() => {
+            UIManager.getInstance().openUI(HomePanel, 0, (ui: HomePanel) => {
+                ui.onShow();
+                UIManager.getInstance().closeUI(ResultPanel);
+            })
+        }, 0.2);
     }
 
     setOpenHoreBtnActive(active:boolean){
     }
     private onOpenHire(){
-        FaynUtils.PlayMusic("btnclick",false,1);
+        FaynUtils.PlayMusic("ui_button_click",false,1);
     }
 
     override onDestroy(): void {

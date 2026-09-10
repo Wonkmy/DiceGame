@@ -25,7 +25,7 @@ export default class SettingPanel extends BaseUI {
     }
 
     private onCloseSelf(){
-        FaynUtils.PlayMusic("click",false,1);
+        FaynUtils.PlayMusic("ui_button_click",false,1);
         UIManager.getInstance().closeUI(SettingPanel);
     }
 }

@@ -158,6 +158,10 @@ export class BehaviorData{
     type:string = "";
     des:string = "";
     bValue:number = 0;
+    attackValue:number = 0;
+    shiledValue:number = 0;
+    healLostRate:number = 0;
+    double_enable:boolean = false;
 }
 export class CalculateData {
     totalPoints: number;
@@ -175,7 +179,7 @@ export enum Monster {
 };
 
 export class MonsterData {
-    id: number = 0;
+    id: string = "";
     name:string = "";
     stage:number = 0;// 出现的关卡数
     hp: number = 0;

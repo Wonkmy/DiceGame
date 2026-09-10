@@ -33,6 +33,7 @@ type LightEventReward = {
 export default class MainPanel extends BaseUI {
     public static instance:MainPanel = null!;
     protected static className = "MainPanel";
+    private readonly MONSTER_LAYER_Y_OFFSET:number = 70;
 
     allDicesNodes:cc.Node[] = [];
     selectedDicePoint:number[]=[]
@@ -78,6 +79,12 @@ export default class MainPanel extends BaseUI {
 
     @property({type:cc.Node, displayName:"低血量警告特效", tooltip:"玩家血量较低时显示，建议放在血量图标附近"})
     lowHpWarningNode:cc.Node = null!;
+
+    @property({type:cc.Node, displayName:"玩家受击全屏红闪节点", tooltip:"玩家被怪物攻击时快速闪红一下，建议放在Canvas下层级最高处，挂Sprite和白色SpriteFrame"})
+    lowHpScreenWarningNode:cc.Node = null!;
+
+    @property({type:cc.Material, displayName:"玩家受击全屏红闪材质", tooltip:"拖拽 shaders/low-hp-screen-vignette 材质"})
+    lowHpScreenWarningMaterial:cc.Material = null!;
 
     @property({type:cc.Node, displayName:"剑狂热特效", tooltip:"凑到大牌型或高攻击力时显示，建议作为 sword 的子节点挂在剑背后"})
     swordFeverEffectNode:cc.Node = null!;
@@ -158,6 +165,7 @@ export default class MainPanel extends BaseUI {
     private swordFeverOriginScale:number = null!;
     private swordFeverOriginOpacity:number = null!;
     private swordFeverLevel:number = 0;
+    private lowHpScreenWarningPlaying:boolean = false;
     private monsterDataLoaded:boolean = false;
     private waitingLoadChapter:boolean = false;
     private freeRerollUsed:boolean = false;
@@ -189,10 +197,12 @@ export default class MainPanel extends BaseUI {
         this.hideBattleWarningEffects();
         this.hideStageStartTips();
         this.applySwordFeverMaterial();
+        this.applyLowHpScreenWarningMaterial();
         this.loadData();
     }
 
     override onShow(): void {
+        GameMain.instance.playBattleBgm();
         Advertise.hideBattleBanner();
         this.clearRuntimeStateForPanelShow();
         this.hideBattleWarningEffects();
@@ -452,9 +462,11 @@ export default class MainPanel extends BaseUI {
         Advertise.showBackHomeChapingByRate();
         UIManager.getInstance().closeUI(ChapterPanel);
         UIManager.getInstance().closeUI(MainPanel);
-        UIManager.getInstance().openUI(HomePanel, 0, (ui: HomePanel) => {
-            ui.onShow();
-        })
+        GameMain.instance.scheduleOnce(() => {
+            UIManager.getInstance().openUI(HomePanel, 0, (ui: HomePanel) => {
+                ui.onShow();
+            })
+        }, 0.2);
     }
 
     private refreshAllCharmItems(){
@@ -483,6 +495,7 @@ export default class MainPanel extends BaseUI {
 
     private onOpenBagPanel(){
         if(GameMain.gameFinished)return;
+        FaynUtils.PlayMusic("ui_button_click",false,1);
         UIManager.getInstance().openUI(BagPanel, 0, (ui: BagPanel) => {
             ui.onShow();
             ui.setInventoryData("bag");
@@ -493,6 +506,7 @@ export default class MainPanel extends BaseUI {
      * 第4关开始每只怪先给1次免费重掷；老玩家免费用完后，可看一次激励视频再重掷。
      */
     onReRoll(){
+        FaynUtils.PlayMusic("ui_button_click",false,1);
         if(GameMain.gameFinished){
             UIManager.getInstance().openUI(TipPanel, GameMain.TIP_UI_Z_ORDER, (ui: TipPanel) => {
                 ui.onShow();
@@ -576,7 +590,6 @@ export default class MainPanel extends BaseUI {
         this.refreshFreeRerollBtnState();
 
         this.scheduleOnce(()=>{
-            FaynUtils.PlayMusic("btnclick",false,1);
             this.loadDices(GameMain.instance.player.curSelectedDiceType, forcedPoints);
         },delay);
     }
@@ -739,6 +752,7 @@ export default class MainPanel extends BaseUI {
             return;
         }
         if (this.battlleIn) return;
+        FaynUtils.PlayMusic("ui_button_click",false,1);
         this.battlleIn = true;
         this.resetDiceHandFeedback();
         this.setAttackBtnLocked(true);
@@ -804,6 +818,7 @@ export default class MainPanel extends BaseUI {
                 this.hideHandWordForAttack();
                 this.hideSwordFeverForAttack();
                 _sword.setSiblingIndex(999)
+                FaynUtils.PlayMusic("sword_attack",false,1);
                 // 宝剑攻击动画：从当前编辑器位置出发，攻击结束后回到记录的位置，避免 UI 调整后被旧坐标拉偏。
                 cc.tween(_sword)
                     .parallel(
@@ -1304,6 +1319,7 @@ export default class MainPanel extends BaseUI {
             }
 
             let createCount:number = Math.min(this.unusePointCount, points.length);
+            this.playDiceRollSoundByCount(createCount);
             for (let i = 0; i < createCount; i++) {
                 let btn_openDicePackagePos = this.node.getChildByName("GamingContainer").getChildByName("btn_openDicePackage");
                 // 固定点数要在tween回调前先取好，否则标记位提前变化会导致首轮也变随机
@@ -1341,6 +1357,21 @@ export default class MainPanel extends BaseUI {
             }
             this.refreshFreeRerollBtnState();
         })
+    }
+
+    /**
+     * 一轮发骰只播放一次滚动音效。
+     * 时长按最后一颗骰子飞入并完成滚动计算，不按骰子数量简单相乘，避免5颗骰子拖到4秒多。
+     */
+    private playDiceRollSoundByCount(createCount:number){
+        if(createCount <= 0)return;
+
+        let diceCreateGap:number = 0.2;
+        let diceFlyTime:number = 0.3;
+        let diceRollTime:number = 0.85;
+        let soundDuration:number = (createCount - 1) * diceCreateGap + diceFlyTime + diceRollTime;
+        soundDuration = Math.min(soundDuration, 2.0);
+        FaynUtils.PlayMusicForDuration("dice_roll", soundDuration, 1);
     }
 
     private tryStartFirstGuide(){
@@ -1597,7 +1628,9 @@ export default class MainPanel extends BaseUI {
             }
 
             let newMonster: cc.Node = cc.instantiate(prefab);
-            this.node.getChildByName("GamingContainer").addChild(newMonster);
+            let gamingContainer:cc.Node = this.node.getChildByName("GamingContainer");
+            gamingContainer.addChild(newMonster);
+            this.moveMonsterUnderBattleTable(newMonster, gamingContainer);
             let monsterComp:Monster = newMonster.getComponent(Monster);
             monsterComp.init(md);
             monsterComp.prepareEnterHidden();
@@ -1615,6 +1648,26 @@ export default class MainPanel extends BaseUI {
         cc.tween(this.node.getChildByName("GamingContainer"))
             .to(0.25, { opacity: 255 })
             .start()
+    }
+
+    /**
+     * 怪物放大后需要被桌面边缘压住，所以把怪物节点移到桌面图层下方。
+     * 坐标先从 GamingContainer 转到 MainPanel，避免层级变化导致怪物位置偏移。
+     */
+    private moveMonsterUnderBattleTable(monsterNode:cc.Node, oldParent:cc.Node){
+        if(!monsterNode || !cc.isValid(monsterNode) || !oldParent || !cc.isValid(oldParent))return;
+
+        let worldPos:cc.Vec2 = oldParent.convertToWorldSpaceAR(monsterNode.position);
+        let localPos:cc.Vec2 = this.node.convertToNodeSpaceAR(worldPos);
+        monsterNode.removeFromParent(false);
+        this.node.addChild(monsterNode);
+        // 怪物放到桌面下方后会被边框遮住一部分，整体上移一点保留压迫感。
+        monsterNode.setPosition(localPos.x, localPos.y + this.MONSTER_LAYER_Y_OFFSET);
+
+        let battleTableNode:cc.Node = this.node.getChildByName("battle_table_empty");
+        if(battleTableNode && cc.isValid(battleTableNode)){
+            monsterNode.setSiblingIndex(battleTableNode.getSiblingIndex());
+        }
     }
 
     disposeMonster(monster:Monster){
@@ -1687,19 +1740,23 @@ export default class MainPanel extends BaseUI {
         } else {
             setTimeout(() => {
                 this.NumPointsText.string = p.toString();
+                FaynUtils.PlayMusic("formula_pop",false,1);
                 this.nodeScale(this.NumPointsText.node.parent)
                 this.cameraShake(1.01);
                 setTimeout(() => {
                     this.NumMultipleText.string = m.toString();
+                    FaynUtils.PlayMusic("formula_pop",false,1);
                     this.nodeScale(this.NumMultipleText.node.parent)
                 this.cameraShake(1.01);
                     setTimeout(() => {
                         if (totalAttack > 0) {
                             this.TotalText.string = (p * m).toString();
+                            FaynUtils.PlayMusic("formula_pop",false,1);
                             this.nodeScale(this.TotalText.node)
                             this.cameraShake(1.06);
                             setTimeout(() => {
                                 this.TotalText.string = finalShowAttack.toString()
+                                FaynUtils.PlayMusic("formula_pop",false,1);
                                 this.nodeScale(this.TotalText.node)
                                 this.refreshShieldDamageTip(rawShowAttack, finalShowAttack);
                                 this.refreshBattleWarningEffects();
@@ -1716,6 +1773,7 @@ export default class MainPanel extends BaseUI {
                         else {
                             this.cameraShake(1.06);
                             this.TotalText.string = finalShowAttack.toString();
+                            FaynUtils.PlayMusic("formula_pop",false,1);
                             this.nodeScale(this.TotalText.node)
                             this.refreshShieldDamageTip(rawShowAttack, finalShowAttack);
                             this.refreshBattleWarningEffects();
@@ -1744,6 +1802,7 @@ export default class MainPanel extends BaseUI {
         let totalNode:cc.Node = this.TotalText.node;
         this.cacheTotalTextOrigin();
         this.TotalText.string = `攻击力：${finalAttack}`;
+        FaynUtils.PlayMusic("total_attack_show",false,this.getTotalAttackSoundVolume(finalAttack));
         let targetScale:number = this.totalTextOriginScale * this.getTotalAttackFocusScale(finalAttack);
         let textWidth:number = this.getEstimatedLabelTextWidth(this.TotalText);
         // SHRINK 会受节点宽度限制，聚焦显示时临时扩宽，避免“攻击力：xx”被压成两行。
@@ -1772,6 +1831,16 @@ export default class MainPanel extends BaseUI {
         if(finalAttack >= 80)return 2;
         if(finalAttack >= 40)return 1.5;
         return 1;
+    }
+
+    /**
+     * 最终攻击力越高，弹出音效越响。
+     * 和文本缩放保持同一套三档反馈，避免低伤害也吵、高伤害却没冲击力。
+     */
+    private getTotalAttackSoundVolume(finalAttack:number):number{
+        if(finalAttack >= 80)return 1;
+        if(finalAttack >= 40)return 0.78;
+        return 0.55;
     }
 
     /**
@@ -1953,7 +2022,21 @@ export default class MainPanel extends BaseUI {
         this.setKillReadyWordVisible(false);
         this.setAttackBtnKillReadyAnim(false);
         this.setLoopEffectVisible(this.lowHpWarningNode, false, "lowHp");
+        this.setLowHpScreenWarningVisible(false);
         this.setSwordFeverVisible(0);
+    }
+
+    /**
+     * 给低血量全屏红闪节点应用暗角 shader。
+     * 具体渐变和闪烁由材质完成，节点只作为全屏渲染载体。
+     */
+    private applyLowHpScreenWarningMaterial(){
+        if(!this.lowHpScreenWarningNode || !cc.isValid(this.lowHpScreenWarningNode) || !this.lowHpScreenWarningMaterial)return;
+
+        let sprite:cc.Sprite = this.lowHpScreenWarningNode.getComponent(cc.Sprite);
+        if(!sprite)return;
+
+        sprite.setMaterial(0, this.lowHpScreenWarningMaterial);
     }
 
     /**
@@ -2117,6 +2200,7 @@ export default class MainPanel extends BaseUI {
             if(this.killReadyWordOriginScale === null){
                 this.killReadyWordOriginScale = this.killReadyWordNode.scale;
             }
+            FaynUtils.PlayMusic("kill_ready", false, 1);
             this.killReadyWordNode.active = true;
             this.playKillReadyWordLoopAnim();
         }else{
@@ -2262,6 +2346,48 @@ export default class MainPanel extends BaseUI {
         this.setLoopEffectVisible(this.lowHpWarningNode, show, "lowHp");
     }
 
+    /**
+     * 玩家被怪物攻击时快速闪红一下。
+     * 不再作为低血量持续提示，低血量提示仍由血量节点附近的特效负责。
+     */
+    public playPlayerHurtScreenFlash(){
+        if(!this.lowHpScreenWarningNode || !cc.isValid(this.lowHpScreenWarningNode))return;
+
+        this.applyLowHpScreenWarningMaterial();
+        this.refreshLowHpScreenWarningSize();
+
+        cc.Tween.stopAllByTarget(this.lowHpScreenWarningNode);
+        this.lowHpScreenWarningPlaying = true;
+        this.lowHpScreenWarningNode.active = true;
+        this.lowHpScreenWarningNode.opacity = 0;
+        this.lowHpScreenWarningNode.zIndex = 998;
+        cc.tween(this.lowHpScreenWarningNode)
+            .to(0.05, { opacity: 255 })
+            .to(0.22, { opacity: 0 })
+            .call(() => {
+                if(!this.lowHpScreenWarningNode || !cc.isValid(this.lowHpScreenWarningNode))return;
+                this.lowHpScreenWarningPlaying = false;
+                this.lowHpScreenWarningNode.active = false;
+            })
+            .start();
+    }
+
+    private setLowHpScreenWarningVisible(show:boolean){
+        if(!this.lowHpScreenWarningNode || !cc.isValid(this.lowHpScreenWarningNode))return;
+        if(show)return;
+
+        cc.Tween.stopAllByTarget(this.lowHpScreenWarningNode);
+        this.lowHpScreenWarningPlaying = false;
+        this.lowHpScreenWarningNode.active = false;
+    }
+
+    private refreshLowHpScreenWarningSize(){
+        if(!this.lowHpScreenWarningNode || !cc.isValid(this.lowHpScreenWarningNode))return;
+
+        this.lowHpScreenWarningNode.setContentSize(cc.winSize.width, cc.winSize.height);
+        this.lowHpScreenWarningNode.setPosition(0, 0);
+    }
+
     private setLoopEffectVisible(effectNode:cc.Node, show:boolean, effectType:string){
         if(!effectNode || !cc.isValid(effectNode))return;
 
@@ -2319,6 +2445,10 @@ export default class MainPanel extends BaseUI {
         }
         if(this.lowHpWarningNode && cc.isValid(this.lowHpWarningNode)){
             cc.Tween.stopAllByTarget(this.lowHpWarningNode);
+        }
+        if(this.lowHpScreenWarningNode && cc.isValid(this.lowHpScreenWarningNode)){
+            cc.Tween.stopAllByTarget(this.lowHpScreenWarningNode);
+            this.lowHpScreenWarningNode.active = false;
         }
         if(this.swordFeverEffectNode && cc.isValid(this.swordFeverEffectNode)){
             cc.Tween.stopAllByTarget(this.swordFeverEffectNode);

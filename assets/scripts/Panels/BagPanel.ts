@@ -20,11 +20,11 @@ export default class BagPanel extends BaseUI {
     override onShow(): void {
         Advertise.showBannerForNormalPanel();
         this.closeBtn.on(cc.Node.EventType.TOUCH_END, () => {
-            FaynUtils.PlayMusic("click",false,1);
+            FaynUtils.PlayMusic("ui_button_click",false,1);
             UIManager.getInstance().closeUI(BagPanel);
         },this)
         this.node.getChildByName("splash").on(cc.Node.EventType.TOUCH_END, () => {
-            FaynUtils.PlayMusic("click",false,1);
+            FaynUtils.PlayMusic("ui_button_click",false,1);
             UIManager.getInstance().closeUI(BagPanel);
         }, this)
     }

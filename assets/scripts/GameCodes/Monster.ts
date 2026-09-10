@@ -1,6 +1,7 @@
 import GameMain from "../GameMain";
-import { MonsterData, randomInt } from "../Global/DiceHandUtil";
+import { BehaviorData, MonsterData, randomInt } from "../Global/DiceHandUtil";
 import MainPanel from "../Panels/MainPanel";
+import { FaynUtils } from "../Global/FaynUtils";
 
 const {ccclass, property} = cc._decorator;
 
@@ -8,6 +9,8 @@ const {ccclass, property} = cc._decorator;
 export default class Monster extends cc.Component {
     @property({type:cc.Node})
     hpSlider:cc.Node = null!;
+    @property({type:cc.Material, displayName:"怪物死亡白闪材质", tooltip:"拖拽 shaders/monster-white-flash 材质，死亡瞬间使用"})
+    monsterWhiteFlashMaterial:cc.Material = null!;
     hpText:cc.Label = null!;
     maxValue:number = 320;// 最大的血条宽度，后面血条的显示都基于这个宽度
 
@@ -26,7 +29,7 @@ export default class Monster extends cc.Component {
     private monsterViewOriginY:number = 0;
     private monsterViewMaxWidth:number = 0;
     private monsterViewMaxHeight:number = 0;
-    private readonly MONSTER_VIEW_SCALE_RATE:number = 1.4;
+    private readonly MONSTER_VIEW_TARGET_WIDTH:number = 250;
     private monsterIntentOriginScale:number = 1;
     private monsterIntentOriginColor:cc.Color = null!;
 
@@ -74,25 +77,12 @@ export default class Monster extends cc.Component {
         let realHeight:number = rect && rect.height > 0 ? rect.height : spriteFrame.getOriginalSize().height;
         if(realWidth <= 0 || realHeight <= 0)return;
 
-        let maxWidth:number = this.monsterViewMaxWidth > 0 ? this.monsterViewMaxWidth : viewNode.width;
-        let maxHeight:number = this.monsterViewMaxHeight > 0 ? this.monsterViewMaxHeight : viewNode.height;
-        // 允许小体型精灵按显示框等比放大，否则 Trim 后的蝙蝠、盗贼会显得过小。
-        let scale:number = Math.min(maxWidth / realWidth, maxHeight / realHeight) * this.getMonsterViewScaleRate();
+        // 怪物需要明显压迫感，按固定目标宽度绘制，高度按 SpriteFrame 真实比例同步计算，不改节点 scale。
+        let targetWidth:number = this.MONSTER_VIEW_TARGET_WIDTH;
+        let targetHeight:number = realHeight * (targetWidth / realWidth);
 
-        viewNode.width = realWidth * scale;
-        viewNode.height = realHeight * scale;
-    }
-
-    /**
-     * 获取怪物显示倍率。
-     * 前两只怪物本身轮廓偏矮，额外放大一点，避免新手关压迫感不足。
-     */
-    private getMonsterViewScaleRate():number{
-        if(this.monsterData && (this.monsterData.id == "m001" || this.monsterData.id == "m002")){
-            return 1.65;
-        }
-
-        return this.MONSTER_VIEW_SCALE_RATE;
+        viewNode.width = targetWidth;
+        viewNode.height = targetHeight;
     }
 
     /**
@@ -130,6 +120,7 @@ export default class Monster extends cc.Component {
         }
         this.setBattleInfoVisible(false);
         cc.Tween.stopAllByTarget(viewNode);
+        FaynUtils.PlayMusic("monster_enter", false, 1);
         if(viewNode.opacity > 0){
             viewNode.y = this.monsterViewOriginY + 90;
             viewNode.scale = this.monsterViewOriginScale * 0.86;
@@ -204,6 +195,7 @@ export default class Monster extends cc.Component {
     }
 
     beHurt(v:number){
+        FaynUtils.PlayMusic("monster_hurt", false, 1);
         let finalDamage:number = v - this.shiled;
         if(finalDamage<=0){
             finalDamage = 1;
@@ -239,8 +231,25 @@ export default class Monster extends cc.Component {
     private onDie(){
         this.stopLowHpFeedback();
         let _view = this.node.getChildByName("view");
+        let originScale:number = _view.scale;
+        let sprite:cc.Sprite = _view.getComponent(cc.Sprite);
+        let originMaterial:cc.Material = sprite ? sprite.getMaterial(0) : null!;
+        this.loadTip(new cc.Vec2(0,0), 1.8);
+        if(sprite && this.monsterWhiteFlashMaterial){
+            sprite.setMaterial(0, this.monsterWhiteFlashMaterial);
+        }
         cc.tween(_view)
-            .to(1.0,{opacity:0})
+            // 死亡瞬间先给一个短促爆发，再快速缩小淡出，流程仍然走原来的回收。
+            .to(0.08,{scale:originScale * 1.15})
+            .call(()=>{
+                if(sprite && originMaterial){
+                    sprite.setMaterial(0, originMaterial);
+                }
+            })
+            .parallel(
+                cc.tween().to(0.24,{scale:originScale * 0.75},{easing:"cubicIn"}),
+                cc.tween().to(0.24,{opacity:0})
+            )
             .call(()=>{
                 MainPanel.instance.disposeMonster(this);
             })
@@ -248,6 +257,39 @@ export default class Monster extends cc.Component {
     }
 
     doAttackAction(){
+        let attackTimes:number = this.isDoubleAttackEnabled() ? 2 : 1;
+        this.playMonsterAttackByTimes(attackTimes, () => {
+            this.applyTurnBehaviors();
+        });
+    }
+
+    /**
+     * 按次数串行播放怪物攻击。
+     * 双击不能合并成一次伤害，必须每次命中都单独扣血、音效和红闪。
+     */
+    private playMonsterAttackByTimes(leftTimes:number, finishCallBack:Function){
+        if(leftTimes <= 0){
+            if(finishCallBack){
+                finishCallBack();
+            }
+            return;
+        }
+
+        this.playSingleAttackAction(() => {
+            if(leftTimes > 1){
+                this.scheduleOnce(() => {
+                    this.playMonsterAttackByTimes(leftTimes - 1, finishCallBack);
+                }, 0.28);
+            }else if(finishCallBack){
+                finishCallBack();
+            }
+        });
+    }
+
+    /**
+     * 播放一次完整的怪物攻击动作。
+     */
+    private playSingleAttackAction(finishCallBack:Function){
         let _view = this.node.getChildByName("view");
         this.playAttackWarningAnim();
         GameMain.instance.player.playBeforeHurtWarning(this.getCurAttack());
@@ -263,21 +305,73 @@ export default class Monster extends cc.Component {
                 .to(0.15,{scale:1})
                 .to(0.1,{y:-17},{easing:"backIn"})
                 .call(()=>{
+                    FaynUtils.PlayMusic("player_hurt", false, 1);
+                    MainPanel.instance.playPlayerHurtScreenFlash();
                     GameMain.instance.player.brHurt(this.getCurAttack());
 
-                    if (this.monsterData.behaviorData) {
-                        if (this.monsterData.behaviorData.type == "attack") {
-                            this.attack += this.monsterData.behaviorData.bValue;
-                        }else if(this.monsterData.behaviorData.type == "attack-shiled"){
-                            this.attack += this.monsterData.behaviorData.bValue;
-                            this.shiled += this.monsterData.behaviorData.bValue;
-                        }
-                        this.refreshInfo()
+                    if(finishCallBack){
+                        finishCallBack();
                     }
                 })
                 .start()
             })
             .start()
+    }
+
+    private isDoubleAttackEnabled():boolean{
+        return !!(this.monsterData && this.monsterData.behaviorData && this.monsterData.behaviorData.double_enable);
+    }
+
+    /**
+     * 怪物每次完成攻击后触发行为。
+     * behaviorData 仍然保持单对象，只是在一个对象里同时配置攻击、护盾、回血。
+     */
+    private applyTurnBehaviors(){
+        if(!this.monsterData || !this.monsterData.behaviorData || this.curHp <= 0)return;
+
+        let behavior:BehaviorData = this.monsterData.behaviorData;
+        let attackAdd:number = behavior.attackValue || 0;
+        let shiledAdd:number = behavior.shiledValue || 0;
+        let healLostRate:number = behavior.healLostRate || 0;
+
+        // 兼容旧配置：只写 type + bValue 时，仍然按旧逻辑生效。
+        if(attackAdd == 0 && shiledAdd == 0 && healLostRate == 0){
+            if(behavior.type == "attack"){
+                attackAdd = behavior.bValue;
+            }else if(behavior.type == "attack-shiled"){
+                attackAdd = behavior.bValue;
+                shiledAdd = behavior.bValue;
+            }else if(behavior.type == "shield" || behavior.type == "shiled"){
+                shiledAdd = behavior.bValue;
+            }else if(behavior.type == "heal-lost"){
+                healLostRate = behavior.bValue;
+            }
+        }
+
+        this.attack += attackAdd;
+        this.shiled += shiledAdd;
+        this.healLostHpByRate(healLostRate);
+
+        this.refreshInfo();
+        this.refreshHP_Slider();
+    }
+
+    /**
+     * 按已损生命百分比回血，bValue 用 0.06 表示恢复已损生命 6%。
+     */
+    private healLostHpByRate(rate:number){
+        if(rate <= 0 || this.curHp >= this.totalHp)return;
+
+        let lostHp:number = this.totalHp - this.curHp;
+        let healValue:number = Math.ceil(lostHp * rate);
+        if(healValue <= 0){
+            healValue = 1;
+        }
+
+        this.curHp += healValue;
+        if(this.curHp > this.totalHp){
+            this.curHp = this.totalHp;
+        }
     }
 
     /**
@@ -576,9 +670,11 @@ export default class Monster extends cc.Component {
         stxt.string = String(this.shiled);
         let ntxt:cc.Label = this.node.getChildByName("mName").getComponent(cc.Label);
         ntxt.string = String(this.monsterData.name);
-        if(this.monsterData.behaviorData && this.monsterData.behaviorData != undefined){
-            let btxt:cc.Label = this.node.getChildByName("monster_intent_bg").getChildByName("behavior").getComponent(cc.Label);
+        let btxt:cc.Label = this.node.getChildByName("monster_intent_bg").getChildByName("behavior").getComponent(cc.Label);
+        if(this.monsterData.behaviorData && this.monsterData.behaviorData.des){
             btxt.string = this.monsterData.behaviorData.des;
+        }else{
+            btxt.string = "";
         }
     }
     getCurAttack(){
@@ -597,11 +693,12 @@ export default class Monster extends cc.Component {
         this.stopLowHpFeedback();
     }
 
-    private loadTip(pos: cc.Vec2) {
+    private loadTip(pos: cc.Vec2, scale:number = 1) {
         GameMain.instance.bundle.load("prefab/hitfx", cc.Prefab, (err, prefab: cc.Prefab) => {
             let newTip: cc.Node = cc.instantiate(prefab);
             this.node.addChild(newTip);
             newTip.setPosition(pos);
+            newTip.scale = scale;
             this.scheduleOnce(()=>{
                 newTip.destroy();
             },0.5);

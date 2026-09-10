@@ -44,25 +44,27 @@ export default class LoadingPanel extends BaseUI {
     private enterNextPanel(){
         UIManager.getInstance().closeUI(LoadingPanel);
 
-        if(DiceGameSave.canNewUserAutoPlay()){
-            // 新用户首局直接进游戏，不消耗挑战次数
-            DiceGameSave.markNewUserAutoPlayed();
-            // 先重置挑战数据，再打开战斗界面，避免 MainPanel.onShow 读取旧进度。
-            GameMain.instance.resetRunData();
-            GameMain.isNewUserFirstPlay = true;
-            // 新用户首次自动进入后的本轮挑战和失败重试，章节预告页继续显示“新手章节”。
-            GameMain.isNewUserChapterNameFlow = true;
-            UIManager.getInstance().openUI(MainPanel,0,(ui:MainPanel)=>{
-                ui.onShow();
-                GameMain.instance.player.getDices();
-                GameMain.instance.playMarketBgmOnce();
-            })
-            return;
-        }
+        // 避免同一帧关闭旧面板又打开新面板，降低静态 instance 指针错乱风险。
+        GameMain.instance.scheduleOnce(() => {
+            if(DiceGameSave.canNewUserAutoPlay()){
+                // 新用户首局直接进游戏，不消耗挑战次数
+                DiceGameSave.markNewUserAutoPlayed();
+                // 先重置挑战数据，再打开战斗界面，避免 MainPanel.onShow 读取旧进度。
+                GameMain.instance.resetRunData();
+                GameMain.isNewUserFirstPlay = true;
+                // 新用户首次自动进入后的本轮挑战和失败重试，章节预告页继续显示“新手章节”。
+                GameMain.isNewUserChapterNameFlow = true;
+                UIManager.getInstance().openUI(MainPanel,0,(ui:MainPanel)=>{
+                    ui.onShow();
+                    GameMain.instance.player.getDices();
+                })
+                return;
+            }
 
-        UIManager.getInstance().openUI(HomePanel,0,(ui:HomePanel)=>{
-            ui.onShow();
-        })
+            UIManager.getInstance().openUI(HomePanel,0,(ui:HomePanel)=>{
+                ui.onShow();
+            })
+        }, 0.2);
     }
 
     override onDestroy(): void {

@@ -1,0 +1,76 @@
+CCEffect %{
+  techniques:
+  - passes:
+    - vert: vs
+      frag: fs
+      blendState:
+        targets:
+        - blend: true
+      rasterizerState:
+        cullMode: none
+      properties:
+        texture: { value: white }
+        vignetteParams: { value: [0.22, 3.0, 0.72, 1.18] }
+}%
+
+CCProgram vs %{
+  precision highp float;
+
+  #include <cc-global>
+
+  in vec3 a_position;
+  in vec2 a_uv0;
+  in vec4 a_color;
+
+  out vec2 v_uv0;
+  out vec4 v_color;
+
+  void main () {
+    gl_Position = cc_matViewProj * vec4(a_position, 1.0);
+    v_uv0 = a_uv0;
+    v_color = a_color;
+  }
+}%
+
+CCProgram fs %{
+  precision highp float;
+
+  #include <cc-global>
+  #include <texture>
+
+  uniform sampler2D texture;
+
+  uniform ARGS {
+    vec4 vignetteParams;
+  };
+
+  in vec2 v_uv0;
+  in vec4 v_color;
+
+  vec4 sampleTex(vec2 uv) {
+    vec4 c = vec4(1.0);
+    CCTexture(texture, uv, c);
+    return c;
+  }
+
+  void main () {
+    vec2 uv = v_uv0;
+    sampleTex(uv);
+
+    float intensity = vignetteParams.x;
+    float speed = vignetteParams.y;
+    float inner = vignetteParams.z;
+    float outer = vignetteParams.w;
+
+    vec2 p = (uv - vec2(0.5)) * 2.0;
+    float edge = length(p);
+    float vignette = smoothstep(inner, outer, edge);
+
+    float pulse = 0.68 + 0.32 * sin(cc_time.x * speed);
+    float alpha = vignette * intensity * pulse;
+    alpha = clamp(alpha, 0.0, 0.22);
+    vec3 redColor = vec3(1.0, 0.02, 0.02);
+
+    gl_FragColor = vec4(redColor, alpha) * v_color;
+  }
+}%

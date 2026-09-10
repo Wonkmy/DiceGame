@@ -1,0 +1,15 @@
+{
+  "__type__": "cc.Material",
+  "_name": "monster-white-flash",
+  "_objFlags": 0,
+  "_native": "",
+  "_effectAsset": {
+    "__uuid__": "8aa82d8a-de27-4ced-b0ca-4708e0794120"
+  },
+  "_techniqueIndex": 0,
+  "_techniqueData": {
+    "0": {
+      "defines": {}
+    }
+  }
+}

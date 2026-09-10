@@ -67,6 +67,7 @@ export default class HomePanel extends BaseUI {
         if(CC_DEBUG){
             DebugTool.attach(this.node);
         }
+        GameMain.instance.playHomeBgm();
     }
 
     private bindHomeBtns(){
@@ -333,11 +334,12 @@ export default class HomePanel extends BaseUI {
         GameMain.instance.resetRunData();
         Advertise.hideBattleBanner();
         UIManager.getInstance().closeUI(HomePanel);
-        UIManager.getInstance().openUI(MainPanel,0,(ui:MainPanel)=>{
-            ui.onShow();
-            GameMain.instance.player.getDices();
-            GameMain.instance.playMarketBgmOnce();
-        })
+        GameMain.instance.scheduleOnce(() => {
+            UIManager.getInstance().openUI(MainPanel,0,(ui:MainPanel)=>{
+                ui.onShow();
+                GameMain.instance.player.getDices();
+            })
+        }, 0.2);
     }
 
     override onDestroy(): void {

@@ -26,7 +26,7 @@ export default class GameMain extends cc.Component {
     player:Player = null!;
 
     bundle:cc.AssetManager.Bundle = null!;
-    private marketBgmStarted:boolean = false;
+    private currentBgmName:string = "";
 
     static curChapterIndex:number = 0;
     static curStageIndex:number = 0;
@@ -96,10 +96,37 @@ export default class GameMain extends cc.Component {
     }
 
     playMarketBgmOnce(){
-        if(this.marketBgmStarted)return;
-        this.marketBgmStarted = true;
-        // BGM只在进入游戏后播放一次，循环铺底，音量低于点击和反馈音效。
-        FaynUtils.PlayMusic("bgmloop",true,0.35);
+        this.playHomeBgm();
+    }
+
+    playHomeBgm(){
+        this.switchBgm("bgmloop");
+    }
+
+    playBattleBgm(){
+        this.switchBgm("battlebgmloop");
+    }
+
+    private switchBgm(name:string){
+        if(this.currentBgmName === name)return;
+
+        this.stopOtherBgm(name);
+        this.currentBgmName = name;
+        // BGM 文件本身已经压低，代码层再给一个统一音量，避免盖过战斗音效。
+        FaynUtils.PlayMusic(name,true,0.35);
+        // 音频加载是异步的，延迟再停一次可避免快速切界面时两个 BGM 叠播。
+        this.scheduleOnce(() => {
+            this.stopOtherBgm(name);
+        }, 0.5);
+    }
+
+    private stopOtherBgm(keepName:string){
+        if(keepName !== "bgmloop"){
+            FaynUtils.StopMusic("bgmloop");
+        }
+        if(keepName !== "battlebgmloop"){
+            FaynUtils.StopMusic("battlebgmloop");
+        }
     }
 
     resetRunData(){

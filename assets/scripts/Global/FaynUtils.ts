@@ -12,11 +12,17 @@ export class FaynUtils {
     static PlayMusic(name, loop = false, volume = 1) {
         AudioEngine.Play(name, loop, volume);
     }
+    static PlayMusicForDuration(name:string, duration:number, volume = 1) {
+        AudioEngine.PlayForDuration(name, duration, volume);
+    }
     static PauseMusic(name) {
         AudioEngine.Pause(name);
     }
     static ResumeMusic(name) {
         AudioEngine.Resume(name);
+    }
+    static StopMusic(name:string) {
+        AudioEngine.Stop(name);
     }
     //#endregion
 
@@ -206,6 +212,7 @@ class AudioEngine extends cc.Component {
 
     private static audios: Audio[] = [];
     private static path: string = "";
+    private static readonly SFX_VOLUME_RATE:number = 0.35;
 
     private static Preload(path:string) {
         AudioEngine.audios = new Array<Audio>();
@@ -223,7 +230,7 @@ class AudioEngine extends cc.Component {
         let audioID;
         let a: Audio;
         GameMain.instance.bundle.load((this.path != "" ? this.path + "/" + name : "audios/" + name), cc.AudioClip, (err, audio: cc.AudioClip) => {
-            audioID = cc.audioEngine.play(audio, loop, volume);
+            audioID = cc.audioEngine.play(audio, loop, this.getFinalVolume(loop, volume));
             a = new Audio(audioID, audio);
             AudioEngine.audios.push(a);
             cc.audioEngine.setFinishCallback(audioID, function () {
@@ -232,6 +239,32 @@ class AudioEngine extends cc.Component {
         })
 
         return audioID;
+    }
+
+    public static PlayForDuration(name:string, duration:number, volume = 1) {
+        if(duration <= 0)return;
+
+        GameMain.instance.bundle.load((this.path != "" ? this.path + "/" + name : "audios/" + name), cc.AudioClip, (err, audio: cc.AudioClip) => {
+            if(err || !audio)return;
+
+            // 一整轮骰子只播一个循环音效，到本轮发骰结束时主动停止。
+            let audioID:number = cc.audioEngine.play(audio, true, this.getFinalVolume(false, volume));
+            let a:Audio = new Audio(audioID, audio);
+            AudioEngine.audios.push(a);
+            setTimeout(() => {
+                cc.audioEngine.stop(audioID);
+                AudioEngine.removeFinishedAudio(audioID);
+            }, duration * 1000);
+        })
+    }
+
+    /**
+     * 统一混音：BGM 使用调用处传入音量，短音效统一压低，避免盖住背景音乐。
+     */
+    private static getFinalVolume(loop:boolean, volume:number):number{
+        if(loop)return volume;
+
+        return volume * this.SFX_VOLUME_RATE;
     }
 
     public static Resume(name) {
@@ -246,18 +279,26 @@ class AudioEngine extends cc.Component {
     public static Pause(name) {
         let audioId = AudioEngine.GetIdByName(name);
 
-        if (audioId != null) {
+        if (audioId != null && audioId != -1) {
             return cc.audioEngine.pause(audioId);
         }
 
         return null;
     }
 
+    public static Stop(name:string) {
+        let audioId = AudioEngine.GetIdByName(name);
+        if(audioId == null || audioId == -1)return;
+
+        cc.audioEngine.stop(audioId);
+        AudioEngine.removeAudioById(audioId);
+    }
+
     public static GetState(name) {
 
         let audioId = AudioEngine.GetIdByName(name)
 
-        if (audioId != null) return cc.audioEngine.getState(audioId)
+        if (audioId != null && audioId != -1) return cc.audioEngine.getState(audioId)
 
         return null;
     }
@@ -271,6 +312,15 @@ class AudioEngine extends cc.Component {
                     AudioEngine.audios.splice(index, 1);
                     return;
                 }
+            }
+        }
+    }
+
+    private static removeAudioById(audioID:number) {
+        for (let i = 0; i < AudioEngine.audios.length; i++) {
+            if (AudioEngine.audios[i].id === audioID) {
+                AudioEngine.audios.splice(i, 1);
+                return;
             }
         }
     }

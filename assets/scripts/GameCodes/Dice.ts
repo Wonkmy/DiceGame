@@ -8,6 +8,7 @@
 import GameMain from "../GameMain";
 import { DiceHandType, DiceNodePoint, DiceType, GetCalculateMultiple, getDiceHandResult, GetTypeNameByType, randomInt } from "../Global/DiceHandUtil";
 import MainPanel from "../Panels/MainPanel";
+import { FaynUtils } from "../Global/FaynUtils";
 
 const {ccclass, property} = cc._decorator;
 
@@ -53,6 +54,7 @@ export default class Dice extends cc.Component {
     }
 
     private onSelected() {
+        FaynUtils.PlayMusic("dice_select", false, 1);
         MainPanel.instance.testip.node.active = false;
         if (this.isSelected) {
             this.isSelected = false;
