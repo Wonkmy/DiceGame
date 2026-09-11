@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "54616805-940c-4940-ae52-20f6cd58a3e0",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 2001,
+  "height": 786,
+  "platformSettings": {},
+  "subMetas": {
+    "title_logo_jiushaizheyiba": {
+      "ver": "1.0.6",
+      "uuid": "e8ce7123-76c0-4328-8aa5-86802ff1da65",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "54616805-940c-4940-ae52-20f6cd58a3e0",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 10.5,
+      "offsetY": -22.5,
+      "trimX": 51,
+      "trimY": 45,
+      "width": 1920,
+      "height": 741,
+      "rawWidth": 2001,
+      "rawHeight": 786,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

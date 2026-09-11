@@ -108,7 +108,7 @@ export default class GameMain extends cc.Component {
     }
 
     private switchBgm(name:string){
-        if(this.currentBgmName === name)return;
+        if(this.currentBgmName === name && FaynUtils.HasAudio(name))return;
 
         this.stopOtherBgm(name);
         this.currentBgmName = name;
@@ -127,6 +127,15 @@ export default class GameMain extends cc.Component {
         if(keepName !== "battlebgmloop"){
             FaynUtils.StopMusic("battlebgmloop");
         }
+    }
+
+    refreshCurrentBgmAfterSettingChanged(){
+        if(!FaynUtils.IsMusicEnabled())return;
+
+        let bgmName:string = this.currentBgmName || "bgmloop";
+        // 如果上一次因为关闭音乐没有真正创建音频实例，这里允许重新走一次播放。
+        this.currentBgmName = "";
+        this.switchBgm(bgmName);
     }
 
     resetRunData(){

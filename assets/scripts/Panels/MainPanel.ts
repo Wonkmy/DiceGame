@@ -147,7 +147,7 @@ export default class MainPanel extends BaseUI {
 
     @property({type:cc.Label, displayName:"难度飙升提示文本", tooltip:"难度飙升提示节点中的文本组件；如果使用艺术字节点，可以不拖"})
     difficultyUpTipLabel:cc.Label = null!;
-
+    @property({type:cc.Node, displayName:"回主页节点", tooltip:"回主页"})
     private homeBtn:cc.Node = null!;
     private firstGuideTextOriginPos:cc.Vec2 = null!;
     private killReadyEffectOriginScale:number = null!;
@@ -237,7 +237,11 @@ export default class MainPanel extends BaseUI {
             this.btn_recommend.off(cc.Node.EventType.TOUCH_END, this.onOpenRecommend, this);
             this.btn_recommend.on(cc.Node.EventType.TOUCH_END, this.onOpenRecommend, this);
         }
-        this.createHomeBtn();
+        // this.createHomeBtn();
+        if(this.homeBtn){
+            this.homeBtn.off(cc.Node.EventType.TOUCH_END, this.onBackHome, this);
+            this.homeBtn.on(cc.Node.EventType.TOUCH_END, this.onBackHome, this);
+        }
         if(CC_DEBUG){
             DebugTool.attach(this.node);
         }
@@ -428,33 +432,33 @@ export default class MainPanel extends BaseUI {
         }
     }
 
-    private createHomeBtn(){
-        if(this.homeBtn)return;
+    // private createHomeBtn(){
+    //     if(this.homeBtn)return;
 
-        this.homeBtn = new cc.Node("btn_home");
-        this.homeBtn.width = 110;
-        this.homeBtn.height = 54;
-        this.homeBtn.setPosition(-290, 570);
-        this.node.addChild(this.homeBtn);
+    //     this.homeBtn = new cc.Node("btn_home");
+    //     this.homeBtn.width = 110;
+    //     this.homeBtn.height = 54;
+    //     this.homeBtn.setPosition(-290, 570);
+    //     this.node.addChild(this.homeBtn);
 
-        let bg:cc.Graphics = this.homeBtn.addComponent(cc.Graphics);
-        bg.fillColor = cc.color(80, 52, 112, 255);
-        bg.strokeColor = cc.color(160, 125, 230, 255);
-        bg.lineWidth = 4;
-        bg.roundRect(-55, -27, 110, 54, 8);
-        bg.fill();
-        bg.stroke();
+    //     let bg:cc.Graphics = this.homeBtn.addComponent(cc.Graphics);
+    //     bg.fillColor = cc.color(80, 52, 112, 255);
+    //     bg.strokeColor = cc.color(160, 125, 230, 255);
+    //     bg.lineWidth = 4;
+    //     bg.roundRect(-55, -27, 110, 54, 8);
+    //     bg.fill();
+    //     bg.stroke();
 
-        let labelNode:cc.Node = new cc.Node();
-        this.homeBtn.addChild(labelNode);
-        let label:cc.Label = labelNode.addComponent(cc.Label);
-        label.string = "主页";
-        label.fontSize = 28;
-        label.lineHeight = 34;
-        label.node.color = cc.Color.WHITE;
+    //     let labelNode:cc.Node = new cc.Node();
+    //     this.homeBtn.addChild(labelNode);
+    //     let label:cc.Label = labelNode.addComponent(cc.Label);
+    //     label.string = "主页";
+    //     label.fontSize = 28;
+    //     label.lineHeight = 34;
+    //     label.node.color = cc.Color.WHITE;
 
-        this.homeBtn.on(cc.Node.EventType.TOUCH_END, this.onBackHome, this);
-    }
+
+    // }
 
     private onBackHome(){
         // 主动退出本局：已从主界面开始的挑战次数已经消耗；新用户首局不额外扣次数
@@ -577,8 +581,8 @@ export default class MainPanel extends BaseUI {
     public autoRollDices(delay:number = 1){
         if(GameMain.gameFinished || !this.monster)return;
 
-        // 每回合重发满骰和重掷一样从第4关开始，避免影响前3关教学节奏。
-        if(ConstValue.ALWAYS_ROLL_FULL_DICES_EACH_TURN && GameMain.instance.getChallengeStageScore() >= this.FREE_REROLL_UNLOCK_STAGE && this.allDicesNodes.length > 0){
+        // 老玩家开局就可以启用每回合重发满骰；新手首局仍从第4关开始，避免破坏教学。
+        if(ConstValue.ALWAYS_ROLL_FULL_DICES_EACH_TURN && !this.isNewUserRerollLocked() && this.allDicesNodes.length > 0){
             this.clearCurrentDicesForReroll();
         }
         this.rollDicesOnce(delay);
@@ -605,7 +609,7 @@ export default class MainPanel extends BaseUI {
      */
     private canUseFreeReroll():boolean{
         if(GameMain.gameFinished || this.battlleIn || this.onRollling || !this.monster)return false;
-        if(GameMain.instance.getChallengeStageScore() < this.FREE_REROLL_UNLOCK_STAGE)return false;
+        if(this.isNewUserRerollLocked())return false;
         if(this.freeRerollUsed)return false;
         if(!this.diceReadyForFreeReroll)return false;
         if(this.allDicesNodes.length < 5)return false;
@@ -634,7 +638,7 @@ export default class MainPanel extends BaseUI {
      * 文案只说明当前最主要原因，避免给玩家堆太多规则。
      */
     private getRerollDisableTip():string{
-        if(GameMain.instance.getChallengeStageScore() < this.FREE_REROLL_UNLOCK_STAGE)return "第4关开始可弃骰重掷";
+        if(this.isNewUserRerollLocked())return "第4关开始可弃骰重掷";
         if(GameMain.isNewUserChapterNameFlow && this.freeRerollUsed)return "本关已重掷过";
         if(this.freeRerollUsed && this.videoRerollUsed)return "本关已重掷过";
         if(this.freeRerollUsed && DiceGameSave.getRemainDailyRerollVideoCount() <= 0)return "今日广告重掷已用完";
@@ -643,8 +647,15 @@ export default class MainPanel extends BaseUI {
     }
 
     /**
+     * 新手首局前3关保留教学限制；老玩家从第1关开始就允许免费重掷。
+     */
+    private isNewUserRerollLocked():boolean{
+        return GameMain.isNewUserChapterNameFlow && GameMain.instance.getChallengeStageScore() < this.FREE_REROLL_UNLOCK_STAGE;
+    }
+
+    /**
      * 刷新弃骰重掷按钮置灰状态。
-     * 第1-3关、已使用、结算中都置灰；点击后仍由 onReRoll 做最终逻辑拦截。
+     * 新手首局前3关、已使用、结算中置灰；老玩家从第1关开始可用免费重掷。
      */
     private refreshFreeRerollBtnState(){
         if(!this.btn_onRoll || !cc.isValid(this.btn_onRoll))return;
@@ -1493,6 +1504,11 @@ export default class MainPanel extends BaseUI {
     }
 
     private getCurBattleFixedDicePoints():number[]{
+        // 固定骰只服务新手首局教学；老玩家再次挑战前3关也要随机，避免重复感太强。
+        if(!GameMain.isNewUserFirstPlay){
+            return [];
+        }
+
         if(!this.currentNodeData || !this.currentNodeData.eventData){
             return [];
         }

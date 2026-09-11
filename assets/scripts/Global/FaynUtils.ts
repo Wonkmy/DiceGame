@@ -10,9 +10,15 @@ import GameMain from "../GameMain";
 export class FaynUtils {
     //#region cocos PlayMusic
     static PlayMusic(name, loop = false, volume = 1) {
+        if(loop){
+            if(!this.IsMusicEnabled())return;
+        }else{
+            if(!this.IsSoundEnabled())return;
+        }
         AudioEngine.Play(name, loop, volume);
     }
     static PlayMusicForDuration(name:string, duration:number, volume = 1) {
+        if(!this.IsSoundEnabled())return;
         AudioEngine.PlayForDuration(name, duration, volume);
     }
     static PauseMusic(name) {
@@ -23,6 +29,29 @@ export class FaynUtils {
     }
     static StopMusic(name:string) {
         AudioEngine.Stop(name);
+    }
+    static IsSoundEnabled():boolean{
+        return cc.sys.localStorage.getItem("soundEnabled") !== "0";
+    }
+    static IsMusicEnabled():boolean{
+        return cc.sys.localStorage.getItem("musicEnabled") !== "0";
+    }
+    static SetSoundEnabled(enabled:boolean){
+        cc.sys.localStorage.setItem("soundEnabled",enabled ? "1" : "0");
+    }
+    static SetMusicEnabled(enabled:boolean){
+        cc.sys.localStorage.setItem("musicEnabled",enabled ? "1" : "0");
+        // 当前项目有主页和战斗两条 BGM，设置关闭时统一暂停，打开时恢复已有音轨。
+        if(enabled){
+            AudioEngine.Resume("bgmloop");
+            AudioEngine.Resume("battlebgmloop");
+        }else{
+            AudioEngine.Pause("bgmloop");
+            AudioEngine.Pause("battlebgmloop");
+        }
+    }
+    static HasAudio(name:string):boolean{
+        return AudioEngine.GetState(name) != null;
     }
     //#endregion
 
@@ -230,6 +259,8 @@ class AudioEngine extends cc.Component {
         let audioID;
         let a: Audio;
         GameMain.instance.bundle.load((this.path != "" ? this.path + "/" + name : "audios/" + name), cc.AudioClip, (err, audio: cc.AudioClip) => {
+            if(err || !audio)return;
+
             audioID = cc.audioEngine.play(audio, loop, this.getFinalVolume(loop, volume));
             a = new Audio(audioID, audio);
             AudioEngine.audios.push(a);

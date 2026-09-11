@@ -24,8 +24,8 @@ export default class HomePanel extends BaseUI {
     private startingChallenge:boolean = false;
     private watchingChallengeVideo:boolean = false;
 
-    @property({type:cc.Label, displayName:"标题文本", tooltip:"主界面顶部显示的游戏标题文本"})
-    titleLabel:cc.Label = null!;
+    // @property({type:cc.Label, displayName:"标题文本", tooltip:"主界面顶部显示的游戏标题文本"})
+    // titleLabel:cc.Label = null!;
 
     @property({type:cc.Label, displayName:"剩余次数文本", tooltip:"显示今日剩余挑战次数的文本"})
     remainLabel:cc.Label = null!;
@@ -110,9 +110,9 @@ export default class HomePanel extends BaseUI {
     }
 
     public refreshStartView(){
-        if(this.titleLabel){
-            this.titleLabel.string = "就骰这亿把";
-        }
+        // if(this.titleLabel){
+        //     this.titleLabel.string = "就骰这亿把";
+        // }
 
         if(this.remainLabel){
             this.remainLabel.string = `今日剩余挑战 ${DiceGameSave.getRemainDailyChallengeCount()}/${DiceGameSave.MAX_DAILY_CHALLENGE_COUNT}`;

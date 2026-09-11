@@ -78,6 +78,7 @@ export default class ResultPanel extends BaseUI{
     private nextBtnGuideCallback:Function = null!;
     private resultDetailText:string = "";
     private nextTransitioning:boolean = false;
+    private victoryConfettiRoot:cc.Node = null!;
 
     onLoad(): void {
         this.hideAllResultArt();
@@ -159,6 +160,7 @@ export default class ResultPanel extends BaseUI{
             this.showFailReview(true, this.getFailReviewText());
         }else if(GameMain.gameResultType === "chapterWin"){
             FaynUtils.PlayMusic("victory",false,1);
+            this.playVictoryConfetti();
             if(GameMain.curChapterIndex >= 1){
                 resultText = "本次挑战通关";
                 // 第2章通关就是本版挑战终点，只保留回主页，避免玩家继续点下一关造成流程误导。
@@ -176,6 +178,7 @@ export default class ResultPanel extends BaseUI{
             this.showWinStreak(GameMain.curWinStreak >= 2);
         }else{
             FaynUtils.PlayMusic("victory",false,1);
+            this.playVictoryConfetti();
             // 首胜艺术字只显示一次；后续再打第1关胜利，走普通胜利反馈。
             if(stageScore === 1 && !DiceGameSave.hasShowFirstWin()){
                 DiceGameSave.markFirstWinShow();
@@ -467,6 +470,114 @@ export default class ResultPanel extends BaseUI{
     }
 
     /**
+     * 胜利礼花：左右两侧同时喷出彩带。
+     * 不依赖预制体节点，避免为了一个结算特效增加拖拽成本。
+     */
+    private playVictoryConfetti(){
+        this.clearVictoryConfetti();
+
+        this.victoryConfettiRoot = new cc.Node("victory_confetti_root");
+        this.victoryConfettiRoot.setContentSize(cc.winSize);
+        this.node.addChild(this.victoryConfettiRoot, 200);
+
+        this.spawnConfettiBurst(true);
+        this.spawnConfettiBurst(false);
+
+        this.scheduleOnce(() => {
+            this.clearVictoryConfetti();
+        }, 1.6);
+    }
+
+    private spawnConfettiBurst(fromLeft:boolean){
+        if(!this.victoryConfettiRoot || !cc.isValid(this.victoryConfettiRoot))return;
+
+        let winW:number = cc.winSize.width;
+        let winH:number = cc.winSize.height;
+        let startX:number = fromLeft ? -winW * 0.55 : winW * 0.55;
+        let startY:number = -winH * 0.12;
+        let dir:number = fromLeft ? 1 : -1;
+        let colors:cc.Color[] = [
+            new cc.Color(255, 214, 93, 255),
+            new cc.Color(255, 91, 120, 255),
+            new cc.Color(180, 88, 255, 255),
+            new cc.Color(72, 210, 255, 255),
+            new cc.Color(255, 246, 188, 255)
+        ];
+
+        for(let i = 0; i < 48; i++){
+            let piece:cc.Node = new cc.Node("confetti_piece");
+            let g:cc.Graphics = piece.addComponent(cc.Graphics);
+            let width:number = this.randomRange(22, 42);
+            let height:number = this.randomRange(9, 18);
+            let color:cc.Color = colors[randomInt(0, colors.length - 1)];
+            this.drawRibbonConfetti(g, width, height, color, dir);
+
+            piece.x = startX + this.randomRange(-18, 18);
+            piece.y = startY + this.randomRange(-20, 50);
+            piece.angle = this.randomRange(0, 180);
+            piece.opacity = 0;
+            this.victoryConfettiRoot.addChild(piece);
+
+            let flyX:number = startX + dir * this.randomRange(winW * 0.42, winW * 0.9);
+            let flyY:number = startY + this.randomRange(winH * 0.18, winH * 0.55);
+            let fallY:number = flyY - this.randomRange(60, 170);
+            let delay:number = this.randomRange(0, 0.12);
+            let flyTime:number = this.randomRange(0.42, 0.72);
+            let fallTime:number = this.randomRange(0.35, 0.55);
+
+            cc.tween(piece)
+                .delay(delay)
+                .set({ opacity: 255 })
+                .to(flyTime, { x: flyX, y: flyY, angle: piece.angle + dir * this.randomRange(220, 520) }, { easing: "sineOut" })
+                .to(fallTime, { y: fallY, opacity: 0, angle: piece.angle + dir * this.randomRange(520, 900) }, { easing: "sineIn" })
+                .call(() => {
+                    if(piece && cc.isValid(piece)){
+                        piece.destroy();
+                    }
+                })
+                .start();
+        }
+    }
+
+    private drawRibbonConfetti(g:cc.Graphics, width:number, height:number, color:cc.Color, dir:number){
+        // 先画一条半透明拖尾，再画弯曲彩带主体，让胜利礼花更像真实彩带。
+        let trailLen:number = width * 0.9;
+        g.fillColor = new cc.Color(color.r, color.g, color.b, 75);
+        g.moveTo(-dir * width * 0.2, -height * 0.35);
+        g.lineTo(-dir * (width * 0.2 + trailLen), -height * 0.12);
+        g.lineTo(-dir * (width * 0.2 + trailLen), height * 0.12);
+        g.lineTo(-dir * width * 0.2, height * 0.35);
+        g.close();
+        g.fill();
+
+        g.fillColor = color;
+        g.moveTo(-width * 0.5, -height * 0.45);
+        g.bezierCurveTo(-width * 0.2, -height * 0.95, width * 0.15, height * 0.35, width * 0.5, -height * 0.15);
+        g.lineTo(width * 0.48, height * 0.55);
+        g.bezierCurveTo(width * 0.12, height * 0.95, -width * 0.18, -height * 0.25, -width * 0.5, height * 0.2);
+        g.close();
+        g.fill();
+
+        g.strokeColor = new cc.Color(255, 255, 255, 95);
+        g.lineWidth = 1.5;
+        g.moveTo(-width * 0.35, -height * 0.08);
+        g.bezierCurveTo(-width * 0.08, -height * 0.45, width * 0.2, height * 0.38, width * 0.38, height * 0.08);
+        g.stroke();
+    }
+
+    private clearVictoryConfetti(){
+        if(!this.victoryConfettiRoot || !cc.isValid(this.victoryConfettiRoot))return;
+
+        cc.Tween.stopAllByTarget(this.victoryConfettiRoot);
+        this.victoryConfettiRoot.destroy();
+        this.victoryConfettiRoot = null!;
+    }
+
+    private randomRange(min:number, max:number):number{
+        return min + Math.random() * (max - min);
+    }
+
+    /**
      * 控制连胜文本显示。
      * 只显示本次挑战内的连胜，不读写本地存储，失败或回主页后由 GameMain 清空。
      */
@@ -630,6 +741,8 @@ export default class ResultPanel extends BaseUI{
                 this.winStreakLabel.node.scale = this.winStreakLabelOriginScale;
             }
         }
+
+        this.clearVictoryConfetti();
     }
 
     private playResultFeedbackAnim(titleNode:cc.Node){

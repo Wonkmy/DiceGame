@@ -1,6 +1,6 @@
 {
   "__type__": "cc.Material",
-  "_name": "New Material",
+  "_name": "blur",
   "_objFlags": 0,
   "_native": "",
   "_effectAsset": {
@@ -9,7 +9,16 @@
   "_techniqueIndex": 0,
   "_techniqueData": {
     "0": {
-      "defines": {}
+      "defines": {},
+      "props": {
+        "blurParams": {
+          "__type__": "cc.Vec4",
+          "x": 1,
+          "y": 0.00390625,
+          "z": 0.00390625,
+          "w": 0
+        }
+      }
     }
   }
 }

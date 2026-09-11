@@ -8,11 +8,6 @@
             "shiled": 0,
             "attack": 4,
             "gold": 5,
-            "behaviorData": {
-                "type": "multi",
-                "des": "每回合攻击2次",
-                "double_enable": true
-            },
             "asset": "m001_green_slime"
         },
         {
@@ -227,11 +222,6 @@
             "shiled": 9,
             "attack": 36,
             "gold": 14,
-            "behaviorData": {
-                "type": "multi",
-                "des": "每回合恢复已损生命7%",
-                "healLostRate": 0.07
-            },
             "asset": "m016_abyss_mud_shadow"
         },
         {
