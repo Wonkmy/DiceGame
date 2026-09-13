@@ -16,7 +16,7 @@ export default class ChapterPanel extends BaseUI {
     chapterNodeContainer:cc.Node = null!;
 
     override onShow(): void {
-        Advertise.showBannerForNormalPanel();
+        Advertise.showGeziOnlyForFlowPanel();
     }
 
     setChapterNode(gameCapter:GameChapter){

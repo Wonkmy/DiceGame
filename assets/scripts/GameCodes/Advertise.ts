@@ -16,9 +16,9 @@ export class Advertise {
     private static readonly gezi_ID = "adunit-ec70bdeec82aff54";// 格子广告
     private static readonly NORMAL_PANEL_CHAPING_RATE:number = 0.65;
     private static readonly RESULT_WIN_BANNER_RATE:number = 0.5;
-    private static readonly RESULT_WIN_CHAPING_RATE:number = 0.4;
-    private static readonly RESULT_EARLY_WIN_CHAPING_RATE:number = 0.1;
-    private static readonly RESULT_FAIL_CHAPING_RATE:number = 0.3;
+    private static readonly RESULT_WIN_CHAPING_RATE:number = 0.2;
+    private static readonly RESULT_EARLY_WIN_CHAPING_RATE:number = 0.05;
+    private static readonly RESULT_FAIL_CHAPING_RATE:number = 0.2;
     private static readonly BACK_HOME_CHAPING_RATE:number = 0.8;
 
     static init() {
@@ -52,6 +52,19 @@ export class Advertise {
         }else{
             this.showGeziAd();
         }
+    }
+
+    /**
+     * 主流程界面只展示横幅/格子，不弹插屏。
+     * 主页首屏和章节选择页都属于玩家继续挑战的关键路径，不能一出现就打断。
+     */
+    static showGeziOnlyForFlowPanel(){
+        if(this.shouldBlockNewUserEarlyAds()){
+            this.hideGeziAd();
+            return;
+        }
+
+        this.showGeziAd();
     }
 
     /**

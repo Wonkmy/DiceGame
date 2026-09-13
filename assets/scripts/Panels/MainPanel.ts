@@ -623,7 +623,7 @@ export default class MainPanel extends BaseUI {
      */
     private canUseVideoReroll():boolean{
         if(GameMain.gameFinished || this.battlleIn || this.onRollling || !this.monster)return false;
-        if(GameMain.instance.getChallengeStageScore() < this.FREE_REROLL_UNLOCK_STAGE)return false;
+        // 老玩家从第1关开始，免费重掷用完后就可以看广告重掷；新手首局仍整轮不开放广告重掷。
         if(!this.freeRerollUsed || this.videoRerollUsed || this.watchingRerollVideo)return false;
         if(GameMain.isNewUserChapterNameFlow)return false;
         if(!this.diceReadyForFreeReroll)return false;
@@ -666,6 +666,7 @@ export default class MainPanel extends BaseUI {
 
         let canReroll:boolean = this.canUseFreeReroll() || this.canUseVideoReroll();
         this.refreshRerollBtnLabel();
+        this.refreshAdIconOnButton(this.btn_onRoll, this.canUseVideoReroll());
         let btnComp:cc.Button = this.btn_onRoll.getComponent(cc.Button);
         if(canReroll){
             this.btn_onRoll.opacity = 255;
@@ -694,6 +695,74 @@ export default class MainPanel extends BaseUI {
             txtNode.getComponent(cc.Label).string = "看广告重掷";
         }else{
             txtNode.getComponent(cc.Label).string = "重掷";
+        }
+    }
+
+    /**
+     * 按钮下一次点击需要看广告时，动态挂一个视频图标。
+     * 审核要求广告入口必须有明确标识，所以不要只靠文字说明。
+     */
+    private refreshAdIconOnButton(btn:cc.Node, show:boolean){
+        if(!btn || !cc.isValid(btn))return;
+
+        let iconNode:cc.Node = btn.getChildByName("ad_video_icon");
+        let txtNode:cc.Node = btn.getChildByName("txt");
+        this.refreshAdButtonTextLayout(btn, txtNode, show);
+        if(!show){
+            if(iconNode)iconNode.active = false;
+            return;
+        }
+
+        if(!iconNode){
+            iconNode = new cc.Node("ad_video_icon");
+            iconNode.setContentSize(44, 44);
+            // 广告图标固定贴住按钮左侧内部，避免看起来像普通功能按钮。
+            iconNode.x = -btn.width * 0.5 + 34;
+            iconNode.y = 0;
+            btn.addChild(iconNode, 20);
+            iconNode.addComponent(cc.Sprite);
+        }
+
+        iconNode.active = true;
+        iconNode.x = -btn.width * 0.5 + 34;
+        iconNode.y = 0;
+        let sprite:cc.Sprite = iconNode.getComponent(cc.Sprite);
+        if(sprite && !sprite.spriteFrame){
+            GameMain.instance.bundle.load("arts/ui/Common/AdIcon", cc.SpriteFrame, (err, sp:cc.SpriteFrame) => {
+                if(err || !sp || !iconNode || !cc.isValid(iconNode))return;
+                sprite.spriteFrame = sp;
+                iconNode.setContentSize(44, 44);
+            });
+        }
+    }
+
+    private refreshAdButtonTextLayout(btn:cc.Node, txtNode:cc.Node, show:boolean){
+        if(!btn || !txtNode || !cc.isValid(txtNode))return;
+
+        let label:cc.Label = txtNode.getComponent(cc.Label);
+        let anyTxt:any = txtNode as any;
+        if(anyTxt._originAdIconX === undefined){
+            anyTxt._originAdIconX = txtNode.x;
+            anyTxt._originAdIconWidth = txtNode.width;
+            anyTxt._originAdIconFontSize = label ? label.fontSize : 0;
+        }
+
+        if(!show){
+            txtNode.x = anyTxt._originAdIconX;
+            txtNode.width = anyTxt._originAdIconWidth;
+            if(label && anyTxt._originAdIconFontSize > 0){
+                label.fontSize = anyTxt._originAdIconFontSize;
+            }
+            return;
+        }
+
+        txtNode.x = anyTxt._originAdIconX + 18;
+        txtNode.width = Math.max(80, btn.width - 78);
+        if(label){
+            label.overflow = cc.Label.Overflow.SHRINK;
+            if(label.fontSize > 26){
+                label.fontSize = 26;
+            }
         }
     }
 
@@ -1530,6 +1599,8 @@ export default class MainPanel extends BaseUI {
             this.openResultPanel();
             return;
         }
+        // 事件节点会在不重开 MainPanel 的情况下推进关卡，这里同步顶部关卡文本。
+        this.refreshCurStageLabel();
         // let nodeDatas: Chapter[] = CreateChapter.getChapter(GameMain.curChapterIndex).chapter[GameMain.curStageIndex];
         // UIManager.getInstance().openUI(ChapterPanel, 1, (ui: ChapterPanel) => {
         //     ui.onShow();
@@ -1625,6 +1696,8 @@ export default class MainPanel extends BaseUI {
     openBattle(nodeData:Chapter){
         Advertise.hideBattleBanner();
         this.currentNodeData = nodeData;
+        // 从宝箱/休息等事件节点进入下一场战斗时，MainPanel 没有重新 onShow，必须主动刷新。
+        this.refreshCurStageLabel();
         this.hasUsedFixedDicePoints = false;
         this.freeRerollUsed = false;
         this.videoRerollUsed = false;

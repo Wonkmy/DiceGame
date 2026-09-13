@@ -61,7 +61,7 @@ export default class HomePanel extends BaseUI {
     override onShow(): void {
         this.startingChallenge = false;
         this.watchingChallengeVideo = false;
-        Advertise.showBannerForNormalPanel();
+        Advertise.showGeziOnlyForFlowPanel();
         this.bindHomeBtns();
         this.refreshStartView();
         if(CC_DEBUG){
@@ -222,6 +222,76 @@ export default class HomePanel extends BaseUI {
             label.string = "看广告再战";
         }else{
             label.string = "明日再战";
+        }
+
+        this.refreshAdIconOnButton(this.btn_start, remainChallenge <= 0 && remainShareChallenge <= 0 && DiceGameSave.getRemainDailyVideoChallengeCount() > 0);
+    }
+
+    /**
+     * 按钮下一次点击需要看广告时，动态挂一个视频图标。
+     * 首页挑战入口会在邀请次数用完后切到激励视频，必须给玩家明确广告标识。
+     */
+    private refreshAdIconOnButton(btn:cc.Node, show:boolean){
+        if(!btn || !cc.isValid(btn))return;
+
+        let iconNode:cc.Node = btn.getChildByName("ad_video_icon");
+        let txtNode:cc.Node = btn.getChildByName("txt");
+        this.refreshAdButtonTextLayout(btn, txtNode, show);
+        if(!show){
+            if(iconNode)iconNode.active = false;
+            return;
+        }
+
+        if(!iconNode){
+            iconNode = new cc.Node("ad_video_icon");
+            iconNode.setContentSize(44, 44);
+            // 广告图标固定贴住按钮左侧内部，避免看起来像普通功能按钮。
+            iconNode.x = -btn.width * 0.5 + 34;
+            iconNode.y = 0;
+            btn.addChild(iconNode, 20);
+            iconNode.addComponent(cc.Sprite);
+        }
+
+        iconNode.active = true;
+        iconNode.x = -btn.width * 0.5 + 34;
+        iconNode.y = 0;
+        let sprite:cc.Sprite = iconNode.getComponent(cc.Sprite);
+        if(sprite && !sprite.spriteFrame){
+            GameMain.instance.bundle.load("arts/ui/Common/AdIcon", cc.SpriteFrame, (err, sp:cc.SpriteFrame) => {
+                if(err || !sp || !iconNode || !cc.isValid(iconNode))return;
+                sprite.spriteFrame = sp;
+                iconNode.setContentSize(44, 44);
+            });
+        }
+    }
+
+    private refreshAdButtonTextLayout(btn:cc.Node, txtNode:cc.Node, show:boolean){
+        if(!btn || !txtNode || !cc.isValid(txtNode))return;
+
+        let label:cc.Label = txtNode.getComponent(cc.Label);
+        let anyTxt:any = txtNode as any;
+        if(anyTxt._originAdIconX === undefined){
+            anyTxt._originAdIconX = txtNode.x;
+            anyTxt._originAdIconWidth = txtNode.width;
+            anyTxt._originAdIconFontSize = label ? label.fontSize : 0;
+        }
+
+        if(!show){
+            txtNode.x = anyTxt._originAdIconX;
+            txtNode.width = anyTxt._originAdIconWidth;
+            if(label && anyTxt._originAdIconFontSize > 0){
+                label.fontSize = anyTxt._originAdIconFontSize;
+            }
+            return;
+        }
+
+        txtNode.x = anyTxt._originAdIconX + 18;
+        txtNode.width = Math.max(90, btn.width - 78);
+        if(label){
+            label.overflow = cc.Label.Overflow.SHRINK;
+            if(label.fontSize > 30){
+                label.fontSize = 30;
+            }
         }
     }
 
