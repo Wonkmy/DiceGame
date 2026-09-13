@@ -802,7 +802,7 @@ export default class MainPanel extends BaseUI {
             this.storedHealBtn.on(cc.Node.EventType.TOUCH_END, this.onUseStoredHeal, this);
         }
         if(!this.videoHealBtn || !cc.isValid(this.videoHealBtn)){
-            this.videoHealBtn = this.createSmallBattleButton("video_heal_btn", "广告回血");
+            this.videoHealBtn = this.createSmallBattleButton("video_heal_btn", "回到85%血");
             parent.addChild(this.videoHealBtn, 20);
             this.videoHealBtn.on(cc.Node.EventType.TOUCH_END, this.onUseVideoHeal, this);
         }
@@ -832,11 +832,12 @@ export default class MainPanel extends BaseUI {
 
         let label:cc.Label = labelNode.addComponent(cc.Label);
         label.string = txt;
-        label.fontSize = 26;
-        label.lineHeight = 34;
+        label.fontSize = 40;
+        label.lineHeight = 40;
         label.horizontalAlign = cc.Label.HorizontalAlign.CENTER;
         label.verticalAlign = cc.Label.VerticalAlign.CENTER;
         label.overflow = cc.Label.Overflow.SHRINK;
+        label.enableWrapText = true;
         labelNode.color = cc.Color.WHITE;
 
         btn.addComponent(cc.Button);

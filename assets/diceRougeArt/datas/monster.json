@@ -30,8 +30,8 @@
             "gold": 6,
             "behaviorData": {
                 "type": "attack",
-                "des": "每回合攻击+4",
-                "bValue": 4
+                "des": "每回合攻击+5",
+                "bValue": 5
             },
             "asset": "m003_skeleton"
         },
@@ -39,7 +39,7 @@
             "id": "m004",
             "name": "毒泡怪",
             "stage": 1,
-            "hp": 54,
+            "hp": 60,
             "shiled": 3,
             "attack": 18,
             "gold": 6,
@@ -54,14 +54,14 @@
             "id": "m005",
             "name": "铁壳虫",
             "stage": 1,
-            "hp": 72,
-            "shiled": 5,
+            "hp": 62,
+            "shiled": 6,
             "attack": 22,
             "gold": 8,
             "behaviorData": {
                 "type": "attack-shiled",
-                "des": "每回合攻击+2、护盾+2",
-                "bValue": 2
+                "des": "每回合攻击+3、护盾+3",
+                "bValue": 3
             },
             "asset": "m005_iron_bug"
         },
@@ -71,12 +71,12 @@
             "stage": 1,
             "hp": 82,
             "shiled": 3,
-            "attack": 24,
+            "attack": 35,
             "gold": 8,
             "behaviorData": {
                 "type": "multi",
-                "des": "恢复已损生命6%",
-                "healLostRate": 0.06
+                "des": "恢复已损生命10%",
+                "healLostRate": 0.1
             },
             "asset": "m006_red_thief"
         },
