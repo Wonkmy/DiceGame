@@ -5,6 +5,7 @@ import { BaseUI } from "../UIManager/BaseUI";
 import { UIManager } from "../UIManager/UIManager";
 import MainPanel from "./MainPanel";
 import { Advertise } from "../GameCodes/Advertise";
+import HomePanel from "./HomePanel";
 
 const {ccclass, property} = cc._decorator;
 
@@ -15,8 +16,21 @@ export default class ChapterPanel extends BaseUI {
     @property({type:cc.Node})
     chapterNodeContainer:cc.Node = null!;
 
+    @property({type:cc.Node, displayName:"兜底返回主页按钮", tooltip:"点击后强制关闭所有界面并回到主页；不拖拽则不启用"})
+    btn_forceBackHome:cc.Node = null!;
+
+    private forceBackHomeBtnMovedToCanvas:boolean = false;
+
+    onLoad(){
+        if(this.btn_forceBackHome){
+            this.btn_forceBackHome.off(cc.Node.EventType.TOUCH_END, this.onForceBackHome, this);
+            this.btn_forceBackHome.on(cc.Node.EventType.TOUCH_END, this.onForceBackHome, this);
+        }
+    }
+
     override onShow(): void {
         Advertise.showGeziOnlyForFlowPanel();
+        this.refreshForceBackHomeBtnLayer();
     }
 
     setChapterNode(gameCapter:GameChapter){
@@ -95,5 +109,54 @@ export default class ChapterPanel extends BaseUI {
         label.string = text;
         label.fontSize = 34;
         label.lineHeight = 38;
+    }
+
+    /**
+     * 兜底返回主页：用于玩家遇到无法点击/界面卡住时手动脱离当前流程。
+     */
+    private onForceBackHome(){
+        GameMain.instance.reportTodayChallengeResult();
+        GameMain.instance.resetRunData();
+        Advertise.showBackHomeChapingByRate();
+        UIManager.getInstance().closeALLUI();
+        GameMain.instance.scheduleOnce(() => {
+            UIManager.getInstance().openUI(HomePanel, 0, (ui: HomePanel) => {
+                ui.onShow();
+            });
+        }, 0.2);
+    }
+
+    /**
+     * 兜底按钮每次打开章节界面都提到 Canvas 最高层，避免被其他弹窗遮挡后无法点击。
+     */
+    private refreshForceBackHomeBtnLayer(){
+        if(!this.btn_forceBackHome || !cc.isValid(this.btn_forceBackHome))return;
+
+        let canvas:cc.Node = cc.find("Canvas");
+        if(canvas && cc.isValid(canvas) && this.btn_forceBackHome.parent !== canvas){
+            // 挪到 Canvas 下时保持当前屏幕位置，避免改变用户在编辑器里摆好的按钮位置。
+            let oldParent:cc.Node = this.btn_forceBackHome.parent;
+            if(oldParent && cc.isValid(oldParent)){
+                let worldPos:cc.Vec2 = oldParent.convertToWorldSpaceAR(this.btn_forceBackHome.position);
+                this.btn_forceBackHome.removeFromParent(false);
+                canvas.addChild(this.btn_forceBackHome, 99999);
+                this.btn_forceBackHome.setPosition(canvas.convertToNodeSpaceAR(worldPos));
+                this.forceBackHomeBtnMovedToCanvas = true;
+            }
+        }
+
+        this.btn_forceBackHome.active = true;
+        this.btn_forceBackHome.zIndex = 99999;
+        this.btn_forceBackHome.setSiblingIndex(99999);
+    }
+
+    onDestroy(): void {
+        if(this.btn_forceBackHome){
+            this.btn_forceBackHome.off(cc.Node.EventType.TOUCH_END, this.onForceBackHome, this);
+            // 挪到 Canvas 后不会跟随 ChapterPanel 自动销毁，这里主动清掉避免残留按钮。
+            if(this.forceBackHomeBtnMovedToCanvas && cc.isValid(this.btn_forceBackHome)){
+                this.btn_forceBackHome.destroy();
+            }
+        }
     }
 }

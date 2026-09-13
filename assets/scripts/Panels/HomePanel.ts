@@ -23,6 +23,7 @@ export default class HomePanel extends BaseUI {
     private isSharingChallenge:boolean = false;
     private startingChallenge:boolean = false;
     private watchingChallengeVideo:boolean = false;
+    private startBtnOriginScale:number = 1;
 
     // @property({type:cc.Label, displayName:"标题文本", tooltip:"主界面顶部显示的游戏标题文本"})
     // titleLabel:cc.Label = null!;
@@ -64,6 +65,7 @@ export default class HomePanel extends BaseUI {
         Advertise.showGeziOnlyForFlowPanel();
         this.bindHomeBtns();
         this.refreshStartView();
+        this.startStartBtnBounce();
         if(CC_DEBUG){
             DebugTool.attach(this.node);
         }
@@ -400,6 +402,7 @@ export default class HomePanel extends BaseUI {
         if(this.startingChallenge)return;
 
         this.startingChallenge = true;
+        this.stopStartBtnBounce();
         // 先重置挑战数据，再打开战斗界面，避免 MainPanel.onShow 读取到上一局残留关卡或状态。
         GameMain.instance.resetRunData();
         Advertise.hideBattleBanner();
@@ -412,7 +415,37 @@ export default class HomePanel extends BaseUI {
         }, 0.2);
     }
 
+    /**
+     * 开始按钮循环弹跳，提醒玩家点击。
+     */
+    private startStartBtnBounce(){
+        if(!this.btn_start || !cc.isValid(this.btn_start))return;
+
+        this.startBtnOriginScale = this.btn_start.scale;
+        cc.Tween.stopAllByTarget(this.btn_start);
+        this.btn_start.scale = this.startBtnOriginScale;
+        cc.tween(this.btn_start)
+            .repeatForever(
+                cc.tween()
+                    .to(0.1, { scaleX: this.startBtnOriginScale * 1.12, scaleY: this.startBtnOriginScale * 0.92 }, { easing: "sineOut" })
+                    .to(0.12, { scaleX: this.startBtnOriginScale * 0.96, scaleY: this.startBtnOriginScale * 1.14 }, { easing: "backOut" })
+                    .to(0.08, { scaleX: this.startBtnOriginScale * 1.04, scaleY: this.startBtnOriginScale * 0.98 }, { easing: "sineOut" })
+                    .to(0.08, { scaleX: this.startBtnOriginScale, scaleY: this.startBtnOriginScale }, { easing: "sineOut" })
+                    .delay(0.55)
+            )
+            .start();
+    }
+
+    private stopStartBtnBounce(){
+        if(!this.btn_start || !cc.isValid(this.btn_start))return;
+
+        cc.Tween.stopAllByTarget(this.btn_start);
+        this.btn_start.scaleX = this.startBtnOriginScale;
+        this.btn_start.scaleY = this.startBtnOriginScale;
+    }
+
     override onDestroy(): void {
+        this.stopStartBtnBounce();
         if(this.btn_start){
             this.btn_start.off(cc.Node.EventType.TOUCH_END, this.onStartChallenge, this);
         }

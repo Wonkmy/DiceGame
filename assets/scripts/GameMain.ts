@@ -35,6 +35,8 @@ export default class GameMain extends cc.Component {
     static isNewUserFirstPlay:boolean = false;// 本次启动是否为新用户自动进入的首局
     static isNewUserChapterNameFlow:boolean = false;// 新用户首次自动进入后的本轮流程，章节名保持“新手章节”
     static curWinStreak:number = 0;// 本次挑战内连续胜利次数，失败/重开/回主页后清空
+    static storedHealValue:number = 0;// 本次挑战内的血袋储血，回主页或重新挑战时清空
+    static storedHealTipShown:boolean = false;// 本次挑战内血袋说明只提示一次
     static readonly TIP_UI_Z_ORDER:number = 99;// 通用提示层级，保证 TipPanel 不会被后续弹窗盖住
 
 
@@ -52,6 +54,8 @@ export default class GameMain extends cc.Component {
         GameMain.curStageIndex = 0;
         GameMain.gameFinished = false;
         GameMain.curWinStreak = 0;
+        GameMain.storedHealValue = 0;
+        GameMain.storedHealTipShown = false;
         ShareManager.initShareMenu();
         Advertise.init();
         RecommendManager.preload();
@@ -149,6 +153,8 @@ export default class GameMain extends cc.Component {
         GameMain.extraPoint = 0;
         GameMain.extraMultiple = 0;
         GameMain.extraDamageRate = 0;
+        GameMain.storedHealValue = 0;
+        GameMain.storedHealTipShown = false;
         // 当前版本先弱化构筑，重开一局时清掉临时Charm。
         GameMain.charmDatas = [];
         DiceGameSave.resetCurrentGame();
@@ -164,6 +170,8 @@ export default class GameMain extends cc.Component {
         GameMain.extraPoint = 0;
         GameMain.extraMultiple = 0;
         GameMain.extraDamageRate = 0;
+        GameMain.storedHealValue = 0;
+        GameMain.storedHealTipShown = false;
         GameMain.charmDatas = [];
         DiceGameSave.resetCurrentGame();
     }

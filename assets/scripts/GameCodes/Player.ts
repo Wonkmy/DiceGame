@@ -58,6 +58,7 @@ export default class Player extends cc.Component {
         this.curHP = this.totalHp;
         this.hpText.string = String(this.curHP);
         MainPanel.instance.refreshBattleWarningEffects();
+        MainPanel.instance.refreshBattleHealButtonsState();
     }
 
     /**
@@ -156,12 +157,12 @@ export default class Player extends cc.Component {
 
         this.hpText.string = String(this.curHP);
         MainPanel.instance.refreshBattleWarningEffects();
+        MainPanel.instance.refreshBattleHealButtonsState();
     }
 
     brHurt(v:number){
         this.curHP -= v;
 
-        // 每次受伤前都重置掉血文字状态，否则第一次动画把节点移走/透明后，第二次可能看不到
         cc.Tween.stopAllByTarget(this.attackNum.node);
         cc.Tween.stopAllByTarget(this.attackbg);
         this.attackNum.node.x = this.attackNumStartX;
@@ -169,37 +170,40 @@ export default class Player extends cc.Component {
         this.attackNum.node.opacity = 255;
         this.attackbg.x = this.attackBgStartX;
         this.attackbg.y = this.attackBgStartY;
-        this.attackbg.opacity = 255;
+        this.attackbg.opacity = 0;
 
         this.attackNum.node.active = true;
-        this.attackbg.active = true;
+        this.attackbg.active = false;
+        this.refreshDamageFeedbackLayer();
+        this.attackNum.node.scale = 0.35;
 
-        this.attackNum.node.color = cc.Color.RED;
+        this.attackNum.node.color = cc.color(255, 80, 35, 255);
+        this.refreshDamageTextOutline();
+        if(MainPanel.instance.hpText){
+            this.attackNum.fontSize = Math.max(this.attackNum.fontSize, MainPanel.instance.hpText.fontSize + 30);
+            this.attackNum.lineHeight = this.attackNum.fontSize + 6;
+        }
         this.attackNum.string = "-"+String(v)
         cc.tween(this.attackNum.node)
+        .to(0.08, { scale: 1.45 }, { easing: "backOut" })
+        .to(0.08, { scale: 1.08 }, { easing: "sineIn" })
+        .delay(0.18)
         .parallel(
-            cc.tween().by(0.5,{y:-50}),
-            cc.tween().to(0.5,{opacity:0})
+            cc.tween().by(0.42,{y:-70}, { easing: "sineIn" }),
+            cc.tween().to(0.42,{opacity:0})
         )
         .call(()=>{
             this.attackNum.node.active = false;
-        })
-        .start()
-
-        cc.tween(this.attackbg)
-        .parallel(
-            cc.tween().by(0.5,{y:-50}),
-            cc.tween().to(0.5,{opacity:0})
-        )
-        .call(()=>{
-            this.attackbg.active = false;
-            // 怪物攻击结束后的补骰属于系统流程，不走玩家手动弃骰重掷限制。
+            // 掉血数字动画结束后再补骰，不依赖隐藏的 icon_attack，也不写死延迟时间。
             MainPanel.instance.autoRollDices();
         })
         .start()
 
+        // icon_attack 背景不再显示，只保留更醒目的掉血数字。
+
         this.hpText.string = String(this.curHP);
         MainPanel.instance.refreshBattleWarningEffects();
+        MainPanel.instance.refreshBattleHealButtonsState();
         if(this.curHP <= 0){
             GameMain.gameFinished = true;
             GameMain.gameResultType = "fail";
@@ -210,5 +214,31 @@ export default class Player extends cc.Component {
             GameMain.curWinStreak = 0;
             MainPanel.instance.openResultPanel();
         }
+    }
+
+    /**
+     * 掉血反馈本来就是血量节点子节点，只调整本地层级，不再反复换父节点。
+     */
+    private refreshDamageFeedbackLayer(){
+        if(this.attackbg && cc.isValid(this.attackbg)){
+            this.attackbg.zIndex = 98;
+            this.attackbg.setSiblingIndex(98);
+        }
+        if(this.attackNum && this.attackNum.node && cc.isValid(this.attackNum.node)){
+            this.attackNum.node.zIndex = 99;
+            this.attackNum.node.setSiblingIndex(99);
+        }
+    }
+
+    private refreshDamageTextOutline(){
+        if(!this.attackNum || !this.attackNum.node || !cc.isValid(this.attackNum.node))return;
+
+        let outline:cc.LabelOutline = this.attackNum.node.getComponent(cc.LabelOutline);
+        if(!outline){
+            outline = this.attackNum.node.addComponent(cc.LabelOutline);
+        }
+
+        outline.color = cc.color(70, 0, 0, 255);
+        outline.width = 4;
     }
 }

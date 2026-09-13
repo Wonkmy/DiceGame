@@ -174,7 +174,15 @@ export default class MainPanel extends BaseUI {
     private watchingRerollVideo:boolean = false;
     private diceReadyForFreeReroll:boolean = false;
     private rerollBtnOriginColor:cc.Color = null!;
+    private storedHealValue:number = 0;
+    private storedHealBtn:cc.Node = null!;
+    private videoHealBtn:cc.Node = null!;
+    private watchingHealVideo:boolean = false;
+    private storedHealTipShown:boolean = false;
     private readonly FREE_REROLL_UNLOCK_STAGE:number = 4;
+    private readonly STORED_HEAL_DAMAGE_RATE:number = 0.2;
+    private readonly STORED_HEAL_MAX_HP_RATE:number = 0.3;
+    private readonly VIDEO_HEAL_TARGET_HP_RATE:number = 0.85;
     private readonly ATTACK_LOCK_TIMEOUT:number = 8;
     private readonly forgeRewards:LightEventReward[] = [
         { name:"擦亮剑锋", desc:"下次攻击点数 +5", effect:"point", value:5, unlockStage:1 },
@@ -206,12 +214,16 @@ export default class MainPanel extends BaseUI {
         GameMain.instance.playBattleBgm();
         Advertise.hideBattleBanner();
         this.clearRuntimeStateForPanelShow();
+        GameMain.gameFinished = false;// 重置游戏结束标志位要在刷新血袋按钮前执行，否则下一关会误置灰
         this.hideBattleWarningEffects();
         this.hideStageStartTips();
         this.refreshAllUIText(0,0,0,null,true);
         this.refreshCurStageLabel();
         GameMain.instance.player.init();
-        GameMain.gameFinished = false;// 重置游戏结束标志位
+        this.storedHealValue = GameMain.storedHealValue;
+        this.storedHealTipShown = GameMain.storedHealTipShown;
+        this.createBattleHealButtons();
+        this.refreshBattleHealButtonsState();
         this.loadGame();
 
         this.showCharmData();
@@ -220,10 +232,10 @@ export default class MainPanel extends BaseUI {
             this.btn_start.off(cc.Node.EventType.TOUCH_END,this.onStartBattle,this);
             this.btn_start.on(cc.Node.EventType.TOUCH_END,this.onStartBattle,this);
         }
-        if(this.btn_openDicePackage){
-            this.btn_openDicePackage.off(cc.Node.EventType.TOUCH_END,this.onOpenBagPanel,this);
-            this.btn_openDicePackage.on(cc.Node.EventType.TOUCH_END,this.onOpenBagPanel,this);
-        }
+        // if(this.btn_openDicePackage){
+        //     this.btn_openDicePackage.off(cc.Node.EventType.TOUCH_END,this.onOpenBagPanel,this);
+        //     this.btn_openDicePackage.on(cc.Node.EventType.TOUCH_END,this.onOpenBagPanel,this);
+        // }
         if(this.btn_onRoll){
             this.btn_onRoll.off(cc.Node.EventType.TOUCH_END,this.onReRoll,this);
             this.btn_onRoll.on(cc.Node.EventType.TOUCH_END,this.onReRoll,this);
@@ -282,6 +294,9 @@ export default class MainPanel extends BaseUI {
         this.freeRerollUsed = false;
         this.videoRerollUsed = false;
         this.watchingRerollVideo = false;
+        this.watchingHealVideo = false;
+        this.storedHealValue = GameMain.storedHealValue;
+        this.storedHealTipShown = GameMain.storedHealTipShown;
         this.diceReadyForFreeReroll = false;
         this.hasUsedFixedDicePoints = false;
         this.firstGuideActive = false;
@@ -462,6 +477,9 @@ export default class MainPanel extends BaseUI {
 
     private onBackHome(){
         // 主动退出本局：已从主界面开始的挑战次数已经消耗；新用户首局不额外扣次数
+        this.storedHealValue = 0;
+        GameMain.storedHealValue = 0;
+        GameMain.storedHealTipShown = false;
         GameMain.instance.reportTodayChallengeResult();
         GameMain.instance.resetRunData();
         Advertise.showBackHomeChapingByRate();
@@ -715,23 +733,26 @@ export default class MainPanel extends BaseUI {
 
         if(!iconNode){
             iconNode = new cc.Node("ad_video_icon");
-            iconNode.setContentSize(44, 44);
+            let iconSize:number = btn.width <= 180 ? 36 : 44;
+            iconNode.setContentSize(iconSize, iconSize);
             // 广告图标固定贴住按钮左侧内部，避免看起来像普通功能按钮。
-            iconNode.x = -btn.width * 0.5 + 34;
+            iconNode.x = -btn.width * 0.5 + (btn.width <= 180 ? 28 : 34);
             iconNode.y = 0;
             btn.addChild(iconNode, 20);
             iconNode.addComponent(cc.Sprite);
         }
 
         iconNode.active = true;
-        iconNode.x = -btn.width * 0.5 + 34;
+        let iconSize:number = btn.width <= 180 ? 36 : 44;
+        iconNode.setContentSize(iconSize, iconSize);
+        iconNode.x = -btn.width * 0.5 + (btn.width <= 180 ? 28 : 34);
         iconNode.y = 0;
         let sprite:cc.Sprite = iconNode.getComponent(cc.Sprite);
         if(sprite && !sprite.spriteFrame){
             GameMain.instance.bundle.load("arts/ui/Common/AdIcon", cc.SpriteFrame, (err, sp:cc.SpriteFrame) => {
                 if(err || !sp || !iconNode || !cc.isValid(iconNode))return;
                 sprite.spriteFrame = sp;
-                iconNode.setContentSize(44, 44);
+                iconNode.setContentSize(iconSize, iconSize);
             });
         }
     }
@@ -757,12 +778,247 @@ export default class MainPanel extends BaseUI {
         }
 
         txtNode.x = anyTxt._originAdIconX + 18;
-        txtNode.width = Math.max(80, btn.width - 78);
+        txtNode.width = Math.max(72, btn.width - (btn.width <= 180 ? 68 : 78));
         if(label){
             label.overflow = cc.Label.Overflow.SHRINK;
-            if(label.fontSize > 26){
-                label.fontSize = 26;
+            let maxFontSize:number = btn.width <= 180 ? 24 : 26;
+            if(label.fontSize > maxFontSize){
+                label.fontSize = maxFontSize;
             }
+        }
+    }
+
+    /**
+     * 战斗回血按钮运行时创建，避免为了小功能改预制体结构。
+     * 两个按钮挂在血量图标同级，位置跟随血量图标。
+     */
+    private createBattleHealButtons(){
+        if(!this.health2d || !cc.isValid(this.health2d))return;
+
+        let parent:cc.Node = this.health2d;
+        if(!this.storedHealBtn || !cc.isValid(this.storedHealBtn)){
+            this.storedHealBtn = this.createSmallBattleButton("stored_heal_btn", "储血 +0");
+            parent.addChild(this.storedHealBtn, 20);
+            this.storedHealBtn.on(cc.Node.EventType.TOUCH_END, this.onUseStoredHeal, this);
+        }
+        if(!this.videoHealBtn || !cc.isValid(this.videoHealBtn)){
+            this.videoHealBtn = this.createSmallBattleButton("video_heal_btn", "广告回血");
+            parent.addChild(this.videoHealBtn, 20);
+            this.videoHealBtn.on(cc.Node.EventType.TOUCH_END, this.onUseVideoHeal, this);
+        }
+
+        // 回血按钮挂在血量节点下，和掉血文本同一套层级，坐标改为相对血量节点。
+        this.storedHealBtn.setPosition(0, -86);
+        this.videoHealBtn.setPosition(0, -154);
+        this.refreshBattleHealLayer();
+    }
+
+    private createSmallBattleButton(name:string, txt:string):cc.Node{
+        let btn:cc.Node = new cc.Node(name);
+        btn.setContentSize(168, 54);
+
+        let bg:cc.Graphics = btn.addComponent(cc.Graphics);
+        bg.fillColor = cc.color(68, 48, 102, 230);
+        bg.strokeColor = cc.color(210, 160, 70, 255);
+        bg.lineWidth = 3;
+        bg.roundRect(-84, -27, 168, 54, 8);
+        bg.fill();
+        bg.stroke();
+
+        let labelNode:cc.Node = new cc.Node("txt");
+        labelNode.setContentSize(148, 42);
+        labelNode.y = 0;
+        btn.addChild(labelNode);
+
+        let label:cc.Label = labelNode.addComponent(cc.Label);
+        label.string = txt;
+        label.fontSize = 26;
+        label.lineHeight = 34;
+        label.horizontalAlign = cc.Label.HorizontalAlign.CENTER;
+        label.verticalAlign = cc.Label.VerticalAlign.CENTER;
+        label.overflow = cc.Label.Overflow.SHRINK;
+        labelNode.color = cc.Color.WHITE;
+
+        btn.addComponent(cc.Button);
+        return btn;
+    }
+
+    public refreshBattleHealButtonsState(){
+        if(!this.health2d || !cc.isValid(this.health2d))return;
+        this.createBattleHealButtons();
+        this.refreshBattleHealLayer();
+
+        let canUseHealFeature:boolean = this.canUseBattleHealFeature();
+        if(this.storedHealBtn && cc.isValid(this.storedHealBtn)){
+            this.storedHealBtn.active = canUseHealFeature;
+        }
+        if(this.videoHealBtn && cc.isValid(this.videoHealBtn)){
+            this.videoHealBtn.active = canUseHealFeature;
+        }
+        if(!canUseHealFeature)return;
+
+        let player:Player = GameMain.instance.player;
+        let lostHp:number = player ? Math.max(player.totalHp - player.curHP, 0) : 0;
+        this.refreshStoredHealBtn(lostHp);
+        this.refreshVideoHealBtn(player, lostHp);
+    }
+
+    private refreshBattleHealLayer(){
+        if(!this.health2d || !cc.isValid(this.health2d))return;
+
+        // 回血按钮和掉血文本都挂在血量节点下；按钮低一些，掉血文本在 Player 里提到更高层。
+        if(this.storedHealBtn && cc.isValid(this.storedHealBtn)){
+            this.storedHealBtn.zIndex = 20;
+            this.storedHealBtn.setSiblingIndex(20);
+        }
+        if(this.videoHealBtn && cc.isValid(this.videoHealBtn)){
+            this.videoHealBtn.zIndex = 20;
+            this.videoHealBtn.setSiblingIndex(20);
+        }
+    }
+
+    private canUseBattleHealFeature():boolean{
+        // 新手首次自动进入的前3关不开放血袋和广告回血；第4关开始开放。
+        if(GameMain.isNewUserChapterNameFlow && GameMain.instance.getChallengeStageScore() < this.FREE_REROLL_UNLOCK_STAGE){
+            return false;
+        }
+
+        return true;
+    }
+
+    private refreshStoredHealBtn(lostHp:number){
+        if(!this.storedHealBtn || !cc.isValid(this.storedHealBtn))return;
+
+        let label:cc.Label = this.getButtonLabel(this.storedHealBtn);
+        if(label){
+            label.string = this.storedHealValue > 0 ? `血袋 +${this.storedHealValue}` : "血袋为空";
+        }
+
+        // 有储血但满血时不清零，只提示生命已满。
+        let canUse:boolean = this.storedHealValue > 0 && !GameMain.gameFinished && !this.watchingHealVideo;
+        // 没有储血时必须立刻置灰，避免玩家误以为还能点击回血。
+        this.setSmallBattleButtonState(this.storedHealBtn, canUse, canUse && lostHp > 0);
+    }
+
+    private refreshVideoHealBtn(player:Player, lostHp:number){
+        if(!this.videoHealBtn || !cc.isValid(this.videoHealBtn))return;
+
+        let targetHp:number = player ? Math.ceil(player.totalHp * this.VIDEO_HEAL_TARGET_HP_RATE) : 0;
+        let canUse:boolean = !!player && player.curHP < targetHp && lostHp > 0 && !GameMain.gameFinished && !this.watchingHealVideo;
+        this.setSmallBattleButtonState(this.videoHealBtn, canUse, canUse);
+        // 广告回血按钮本身就是广告入口，置灰时也保留视频 icon。
+        this.refreshAdIconOnButton(this.videoHealBtn, true);
+    }
+
+    private setSmallBattleButtonState(btn:cc.Node, interactable:boolean, bright:boolean){
+        if(!btn || !cc.isValid(btn))return;
+
+        btn.opacity = bright ? 255 : 120;
+        let button:cc.Button = btn.getComponent(cc.Button);
+        if(button){
+            button.interactable = interactable;
+        }
+    }
+
+    private getButtonLabel(btn:cc.Node):cc.Label{
+        if(!btn || !cc.isValid(btn))return null!;
+        let txtNode:cc.Node = btn.getChildByName("txt");
+        return txtNode ? txtNode.getComponent(cc.Label) : null!;
+    }
+
+    private showHealTip(txt:string, delayTime:number = 1.5){
+        UIManager.getInstance().openUI(TipPanel, GameMain.TIP_UI_Z_ORDER, (ui:TipPanel) => {
+            ui.onShow();
+            ui.showTip(txt, null, false, delayTime);
+        });
+    }
+
+    private onUseStoredHeal(){
+        if(!this.canUseBattleHealFeature())return;
+        if(GameMain.gameFinished)return;
+        if(this.storedHealValue <= 0){
+            this.showHealTip("攻击未击杀怪物时，会储存少量回血");
+            return;
+        }
+
+        let player:Player = GameMain.instance.player;
+        let lostHp:number = Math.max(player.totalHp - player.curHP, 0);
+        if(lostHp <= 0){
+            GameMain.instance.showTip("生命已满");
+            return;
+        }
+
+        let healValue:number = Math.min(this.storedHealValue, lostHp);
+        this.storedHealValue = 0;
+        GameMain.storedHealValue = 0;
+        player.addHp(healValue);
+        this.showHealTip(`血袋恢复了 ${healValue} 点生命`);
+        this.refreshBattleHealButtonsState();
+    }
+
+    private onUseVideoHeal(){
+        if(!this.canUseBattleHealFeature())return;
+        if(GameMain.gameFinished || this.watchingHealVideo)return;
+
+        let player:Player = GameMain.instance.player;
+        let targetHp:number = Math.ceil(player.totalHp * this.VIDEO_HEAL_TARGET_HP_RATE);
+        if(player.curHP >= targetHp){
+            GameMain.instance.showTip("血量已高于85%");
+            this.refreshBattleHealButtonsState();
+            return;
+        }
+
+        this.watchingHealVideo = true;
+        this.refreshBattleHealButtonsState();
+        Advertise.showVideoAd((result:number) => {
+            this.watchingHealVideo = false;
+            if(result !== 1){
+                GameMain.instance.showTip(result === 2 ? "看完广告才能回血" : "广告暂不可用");
+                this.refreshBattleHealButtonsState();
+                return;
+            }
+
+            let curPlayer:Player = GameMain.instance.player;
+            let curTargetHp:number = Math.ceil(curPlayer.totalHp * this.VIDEO_HEAL_TARGET_HP_RATE);
+            let healValue:number = Math.max(curTargetHp - curPlayer.curHP, 0);
+            if(healValue <= 0){
+                GameMain.instance.showTip("血量已高于85%");
+                this.refreshBattleHealButtonsState();
+                return;
+            }
+
+            curPlayer.addHp(healValue);
+            GameMain.instance.showTip(`恢复了 ${healValue} 点生命`);
+            this.refreshBattleHealButtonsState();
+        });
+    }
+
+    private addStoredHealByDamage(realDamage:number){
+        if(!this.canUseBattleHealFeature())return;
+        if(realDamage <= 0 || GameMain.gameFinished)return;
+
+        let player:Player = GameMain.instance.player;
+        let maxStored:number = Math.floor(player.totalHp * this.STORED_HEAL_MAX_HP_RATE);
+        if(maxStored <= 0)return;
+
+        let addValue:number = Math.floor(realDamage * this.STORED_HEAL_DAMAGE_RATE);
+        if(addValue <= 0){
+            addValue = 1;
+        }
+
+        let oldStoredHealValue:number = this.storedHealValue;
+        this.storedHealValue = Math.min(maxStored, this.storedHealValue + addValue);
+        GameMain.storedHealValue = this.storedHealValue;
+        let realAddValue:number = this.storedHealValue - oldStoredHealValue;
+        if(realAddValue <= 0){
+            this.refreshBattleHealButtonsState();
+            return;
+        }
+        this.refreshBattleHealButtonsState();
+        if(!this.storedHealTipShown){
+            this.storedHealTipShown = true;
+            GameMain.storedHealTipShown = true;
+            this.showHealTip(`血袋储存了 ${realAddValue} 点回血，可在危险时使用`, 3);
         }
     }
 
@@ -1227,6 +1483,8 @@ export default class MainPanel extends BaseUI {
      * 斩杀预告会延迟调用这里，普通攻击会立即调用这里。
      */
     private applyAttackDamageAndCleanup(allPoint: number[], finalAttack:number, realDamage:number){
+        // 只要本次造成了真实伤害，就进入血袋；斩杀怪物也应该给玩家留下本次挑战资源。
+        this.addStoredHealByDamage(realDamage);
         this.monster.beHurt(finalAttack);
 
         let finalScale = Math.min((1.0 + (realDamage * 0.03 / 10)),1.2)
