@@ -19,8 +19,8 @@ export default class GameMain extends cc.Component {
 
     protected static className = "GameMain";
 
-    @property({type: cc.JsonAsset})
-    gameConfig: cc.JsonAsset = null!;
+    // @property({type: cc.JsonAsset})
+    // gameConfig: cc.JsonAsset = null!;
 
     @property({type:Player})
     player:Player = null!;

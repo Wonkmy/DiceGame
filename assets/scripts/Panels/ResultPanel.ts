@@ -18,6 +18,8 @@ const {ccclass, property} = cc._decorator;
 @ccclass
 export default class ResultPanel extends BaseUI{
     protected static className = "ResultPanel";
+    private static readonly BATTLE_BGM_NORMAL_VOLUME:number = 0.35;
+    private static readonly FAIL_BGM_LOW_VOLUME:number = 0.1;
 
     @property({type:cc.Node})
     btn_next:cc.Node = null!;
@@ -145,6 +147,7 @@ export default class ResultPanel extends BaseUI{
         this.showDetailBtn(true);
 
         if(GameMain.gameResultType === "fail"){
+            this.setFailBgmLow(true);
             FaynUtils.PlayMusic("defeat",false,1);
             this.showFailArt(true);
             this.showFirstFailHelpGuide = !DiceGameSave.hasShowFirstFailHelpGuide() && DiceGameSave.getRemainDailyShareHelpCount() > 0;
@@ -159,6 +162,7 @@ export default class ResultPanel extends BaseUI{
             this.showShareHelpBtn(true);
             this.showFailReview(true, this.getFailReviewText());
         }else if(GameMain.gameResultType === "chapterWin"){
+            this.setFailBgmLow(false);
             FaynUtils.PlayMusic("victory",false,1);
             this.playVictoryConfetti();
             if(GameMain.curChapterIndex >= 1){
@@ -177,6 +181,7 @@ export default class ResultPanel extends BaseUI{
             this.showFailReview(false);
             this.showWinStreak(GameMain.curWinStreak >= 2);
         }else{
+            this.setFailBgmLow(false);
             FaynUtils.PlayMusic("victory",false,1);
             this.playVictoryConfetti();
             // 首胜艺术字只显示一次；后续再打第1关胜利，走普通胜利反馈。
@@ -1096,6 +1101,7 @@ export default class ResultPanel extends BaseUI{
     }
 
     private restartGame(){
+        this.setFailBgmLow(false);
         this.stopResultFeedbackAnim();
         this.stopShareHelpBtnGuideLoop();
         GameMain.instance.restartCurChapterRun();
@@ -1110,6 +1116,7 @@ export default class ResultPanel extends BaseUI{
     }
 
     private onBackHome(){
+        this.setFailBgmLow(false);
         this.stopResultFeedbackAnim();
         this.stopShareHelpBtnGuideLoop();
         // 回主界面不再额外扣次数，挑战次数统一在开局或重新挑战时扣
@@ -1132,6 +1139,7 @@ export default class ResultPanel extends BaseUI{
     }
 
     override onDestroy(): void {
+        this.setFailBgmLow(false);
         if(this.btn_next && cc.isValid(this.btn_next)){
             this.btn_next.off(cc.Node.EventType.TOUCH_END,this.onNextTurn,this)
         }
@@ -1158,5 +1166,9 @@ export default class ResultPanel extends BaseUI{
         if(this.btn_arena && cc.isValid(this.btn_arena)){
             this.btn_arena.off(cc.Node.EventType.TOUCH_END, this.onOpenArena, this);
         }
+    }
+
+    private setFailBgmLow(low:boolean){
+        FaynUtils.SetMusicVolume("battlebgmloop", low ? ResultPanel.FAIL_BGM_LOW_VOLUME : ResultPanel.BATTLE_BGM_NORMAL_VOLUME);
     }
 }

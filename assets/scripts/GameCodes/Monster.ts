@@ -290,9 +290,16 @@ export default class Monster extends cc.Component {
      * 播放一次完整的怪物攻击动作。
      */
     private playSingleAttackAction(finishCallBack:Function){
+        this.playSingleAttackActionWithDamage(this.getCurAttack(), finishCallBack);
+    }
+
+    /**
+     * 播放一次指定伤害的怪物攻击动作，反击也复用这套表现。
+     */
+    private playSingleAttackActionWithDamage(damage:number, finishCallBack:Function){
         let _view = this.node.getChildByName("view");
         this.playAttackWarningAnim();
-        GameMain.instance.player.playBeforeHurtWarning(this.getCurAttack());
+        GameMain.instance.player.playBeforeHurtWarning(damage);
         cc.tween(_view)
             .delay(0.35)
             .to(0.15,{scale:1.5})
@@ -307,7 +314,7 @@ export default class Monster extends cc.Component {
                 .call(()=>{
                     FaynUtils.PlayMusic("player_hurt", false, 1);
                     MainPanel.instance.playPlayerHurtScreenFlash();
-                    GameMain.instance.player.brHurt(this.getCurAttack());
+                    GameMain.instance.player.brHurt(damage);
 
                     if(finishCallBack){
                         finishCallBack();
@@ -320,6 +327,17 @@ export default class Monster extends cc.Component {
 
     private isDoubleAttackEnabled():boolean{
         return !!(this.monsterData && this.monsterData.behaviorData && this.monsterData.behaviorData.double_enable);
+    }
+
+    public tryCounterAttackAfterPlayerAttack(finishCallBack:Function = null!):boolean{
+        if(!this.monsterData || !this.monsterData.behaviorData || this.curHp <= 0 || GameMain.gameFinished)return false;
+
+        let counterAttack:number = this.monsterData.behaviorData.counterAttack || 0;
+        if(counterAttack <= 0)return false;
+
+        // 反击是玩家打中怪物后的额外伤害，播完后再继续原来的怪物回合。
+        this.playSingleAttackActionWithDamage(counterAttack, finishCallBack);
+        return true;
     }
 
     /**

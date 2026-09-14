@@ -161,6 +161,7 @@ export class BehaviorData{
     attackValue:number = 0;
     shiledValue:number = 0;
     healLostRate:number = 0;
+    counterAttack:number = 0;
     double_enable:boolean = false;
 }
 export class CalculateData {

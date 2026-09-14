@@ -1195,7 +1195,15 @@ export default class MainPanel extends BaseUI {
                         _sword.setSiblingIndex(oldIndex);
                         this.finishAttackUiAfterSwordBack();
                         if(this.monster && this.monster.getCurHp() > 0){
-                            this.monster.doAttackAction();
+                            // 先处理受击反击，反击结束后再进入原来的怪物攻击回合。
+                            let countered:boolean = this.monster.tryCounterAttackAfterPlayerAttack(() => {
+                                if(this.monster && this.monster.getCurHp() > 0 && !GameMain.gameFinished){
+                                    this.monster.doAttackAction();
+                                }
+                            });
+                            if(!countered){
+                                this.monster.doAttackAction();
+                            }
                         }
                     })
                     .start()

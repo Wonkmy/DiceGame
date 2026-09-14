@@ -121,11 +121,10 @@
             "gold": 10,
             "behaviorData": {
                 "type": "multi",
-                "des": "每回合攻击2次、攻击+2、护盾+1、恢复已损生命3%",
+                "des": "每回合攻击2次、攻击+2、受击反击6",
                 "double_enable": true,
                 "attackValue": 2,
-                "shiledValue": 1,
-                "healLostRate": 0.03
+                "counterAttack": 6
             },
             "asset": "m009_shadow_mage"
         },
@@ -139,8 +138,9 @@
             "gold": 13,
             "behaviorData": {
                 "type": "shield",
-                "des": "每回合护盾+3",
-                "bValue": 3
+                "des": "每回合护盾+3、受击反击8",
+                "bValue": 3,
+                "counterAttack": 8
             },
             "asset": "m010_gold_gremlin"
         },
@@ -154,8 +154,9 @@
             "gold": 12,
             "behaviorData": {
                 "type": "multi",
-                "des": "每回合攻击+10",
-                "attackValue": 10
+                "des": "每回合攻击+10、受击反击8",
+                "attackValue": 10,
+                "counterAttack": 8
             },
             "asset": "m011_double_knight"
         },
@@ -169,9 +170,10 @@
             "gold": 13,
             "behaviorData": {
                 "type": "multi",
-                "des": "每回合攻击+4、恢复已损生命6%",
+                "des": "每回合攻击+4、恢复已损生命6%、受击反击10",
                 "attackValue": 4,
-                "healLostRate": 0.06
+                "healLostRate": 0.06,
+                "counterAttack": 10
             },
             "asset": "m012_curse_wizard"
         },
@@ -185,9 +187,10 @@
             "gold": 14,
             "behaviorData": {
                 "type": "multi",
-                "des": "每回合攻击+5、恢复已损生命8%",
+                "des": "每回合攻击+5、恢复已损生命8%、受击反击12",
                 "attackValue": 5,
-                "healLostRate": 0.08
+                "healLostRate": 0.08,
+                "counterAttack": 12
             },
             "asset": "m013_big_mouth"
         },
@@ -201,9 +204,10 @@
             "gold": 15,
             "behaviorData": {
                 "type": "multi",
-                "des": "每回合攻击+3、护盾+3",
+                "des": "每回合攻击+3、护盾+3、受击反击12",
                 "attackValue": 3,
-                "shiledValue": 3
+                "shiledValue": 3,
+                "counterAttack": 12
             },
             "asset": "m014_mirror_golem"
         },
@@ -217,9 +221,10 @@
             "gold": 20,
             "behaviorData": {
                 "type": "multi",
-                "des": "每回合攻击+6、恢复已损生命10%",
+                "des": "每回合攻击+6、恢复已损生命10%、受击反击14",
                 "attackValue": 6,
-                "healLostRate": 0.1
+                "healLostRate": 0.1,
+                "counterAttack": 14
             },
             "asset": "m015_abyss_hunter"
         },
@@ -231,6 +236,11 @@
             "shiled": 9,
             "attack": 36,
             "gold": 14,
+            "behaviorData": {
+                "type": "multi",
+                "des": "受击反击10",
+                "counterAttack": 10
+            },
             "asset": "m016_abyss_mud_shadow"
         },
         {
@@ -243,9 +253,10 @@
             "gold": 15,
             "behaviorData": {
                 "type": "multi",
-                "des": "每回合攻击+10、护盾+8",
+                "des": "每回合攻击+10、护盾+8、受击反击15",
                 "attackValue": 10,
-                "shiledValue": 8
+                "shiledValue": 8,
+                "counterAttack": 15
             },
             "asset": "m017_split_wing_bat_king"
         },
@@ -259,10 +270,11 @@
             "gold": 16,
             "behaviorData": {
                 "type": "multi",
-                "des": "每回合攻击+8、护盾+10、恢复已损生命8%",
+                "des": "每回合攻击+8、护盾+10、恢复已损生命8%、受击反击16",
                 "attackValue": 8,
                 "shiledValue": 10,
-                "healLostRate": 0.08
+                "healLostRate": 0.08,
+                "counterAttack": 16
             },
             "asset": "m018_heavy_bone_guard"
         },
@@ -276,10 +288,11 @@
             "gold": 18,
             "behaviorData": {
                 "type": "multi",
-                "des": "每回合攻击+6、护盾+2、恢复已损生命12%",
+                "des": "每回合攻击+6、护盾+2、恢复已损生命12%、受击反击18",
                 "attackValue": 6,
                 "shiledValue": 2,
-                "healLostRate": 0.12
+                "healLostRate": 0.12,
+                "counterAttack": 18
             },
             "asset": "m019_abyss_poison_core"
         },
@@ -293,11 +306,12 @@
             "gold": 25,
             "behaviorData": {
                 "type": "multi",
-                "des": "每回合攻击2次、攻击+7、护盾+8、恢复已损生命15%",
+                "des": "每回合攻击2次、攻击+7、护盾+8、恢复已损生命15%、受击反击20",
                 "double_enable": true,
                 "attackValue": 7,
                 "shiledValue": 8,
-                "healLostRate": 0.15
+                "healLostRate": 0.15,
+                "counterAttack": 20
             },
             "asset": "m020_abyss_lord"
         }

@@ -30,6 +30,9 @@ export class FaynUtils {
     static StopMusic(name:string) {
         AudioEngine.Stop(name);
     }
+    static SetMusicVolume(name:string, volume:number) {
+        AudioEngine.SetVolume(name, volume);
+    }
     static IsSoundEnabled():boolean{
         return cc.sys.localStorage.getItem("soundEnabled") !== "0";
     }
@@ -332,6 +335,13 @@ class AudioEngine extends cc.Component {
         if (audioId != null && audioId != -1) return cc.audioEngine.getState(audioId)
 
         return null;
+    }
+
+    public static SetVolume(name:string, volume:number) {
+        let audioId = AudioEngine.GetIdByName(name);
+        if(audioId == null || audioId == -1)return;
+
+        cc.audioEngine.setVolume(audioId, volume);
     }
 
     private static removeFinishedAudio(audioID) {
