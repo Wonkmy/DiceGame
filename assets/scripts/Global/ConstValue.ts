@@ -28,7 +28,8 @@ export class ConstValue {
     // 好友排行榜入口保持开启；如果后台隐私声明未完成，由开放数据域接口失败后显示“功能开发中”。
     public static readonly ENABLE_FRIEND_RANK:boolean = true;
     // 微信后台「游戏圈」生成的游戏内跳转 ID；提审前在后台开启游戏圈后填入。
-    public static readonly GAME_CIRCLE_OPEN_LINK = "";
+    // public static readonly GAME_CIRCLE_OPEN_LINK = "FM09ILkjlQxM0OIigsWiuGIdFe7FV0HoNKXS8V9PYRESxuF9CP7jULdUNirbFp11fUKUJk9ifK3ZF1QCTknjjvXILaNynD6E43S80VMff1BqoMg9aoKxFoLua-n1Rhnrh0Geo-5k7kC_o7iPM6JAXN-G2PWBtCfAgawknwlRcdLYVbGaFCobSIkK8adCQGIgTz8jk2tMbV1tvCTA1WXgLFhNxW79oKohMBK_6i_YO4_PGsf99wuc0KnTkniBi7FwQdlcDPJoXl5B3xIgU5L9HacoendCoc_YYyLnM_VIL8UvXZjM9oYp-G7ixGY5WLsML1xDAii1bse9vlfcKIMoPnlsTeTMFlObVk_jJ706eKJLAsUlEr3FomC21W3mB63YXlDAJelHoDrQjxJo9mWBvg";
+    public static readonly GAME_CIRCLE_OPEN_LINK = "-SSEykJvFV3pORt5kTNpS-8Iib_arB011PtLvWghW3imlh6SrkC0BGzOTxHOQxyxKRF10SoFQLfujM8ICxYBfRQz21yxq8NJP7hkl4d-CRQZ1oN4ru3M86oOHDzeNOsDDqDiql51i1aKrSmd84c7l8gYkqjoEzFPcqmpd01TAShpC2bA3PknhMYD_2hqCNrqMSqMP-zxq3QYp-P1J0zK44xtsnpwobrA2Bmi10ZhsNgGzU9Zv7sbsHqczZajkBpyf-1YS1HcwZ7fNkpOjDT5Soa7PMDl_Gp7mm_GZgvKDJsXzfNoG9aarraVwEtXA2pHk12KFrAuRE_7JyimsmoFVw"
     // 微信「评价与推荐」组件固定 OPENLINK 常量，按官方文档直接复制即可。
     public static readonly RECOMMEND_OPEN_LINK = "TWFRCqV5WeM2AkMXhKwJ03MhfPOieJfAsvXKUbWvQFQtLyyA5etMPabBehga950uzfZcH3Vi3QeEh41xRGEVFw";
     // 微信后台「擂台赛组件」生成的 openlink；后台配置完成后复制到这里。
