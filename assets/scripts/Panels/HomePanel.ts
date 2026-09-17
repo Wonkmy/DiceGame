@@ -15,6 +15,7 @@ import SubscribeSystemMessageManager from "../GameCodes/SubscribeSystemMessageMa
 import { ConstValue } from "../Global/ConstValue";
 
 const {ccclass, property} = cc._decorator;
+declare const wx:any;
 
 @ccclass
 export default class HomePanel extends BaseUI {
@@ -54,6 +55,18 @@ export default class HomePanel extends BaseUI {
 
     @property({type:cc.Node, displayName:"擂台赛按钮", tooltip:"点击后打开微信擂台赛组件；仅微信小游戏环境有效"})
     btn_arena:cc.Node = null!;
+
+    @property({type:cc.Node, displayName:"摊上捡个宝推荐卡片", tooltip:"点击后跳转到《摊上捡个宝》；卡片样式和位置在编辑器里自行摆放"})
+    btn_tanShangRecommend:cc.Node = null!;
+
+    @property({type:cc.Node, displayName:"每日任务节点", tooltip:"可拖一个按钮或文本节点；完成任务后点击领取+1挑战次数"})
+    dailyTaskNode:cc.Node = null!;
+
+    @property({displayName:"摊上捡个宝AppId", tooltip:"填写《摊上捡个宝》微信小游戏 AppId"})
+    tanShangAppId:string = "";
+
+    @property({displayName:"摊上捡个宝路径", tooltip:"一般可以留空；需要指定页面或参数时再填"})
+    tanShangPath:string = "";
 
     onLoad(): void {
         HomePanel.instance = this;
@@ -108,6 +121,16 @@ export default class HomePanel extends BaseUI {
             this.btn_arena.on(cc.Node.EventType.TOUCH_END, this.openArena, this);
         }
 
+        if(this.btn_tanShangRecommend){
+            this.btn_tanShangRecommend.off(cc.Node.EventType.TOUCH_END, this.openTanShangRecommend, this);
+            this.btn_tanShangRecommend.on(cc.Node.EventType.TOUCH_END, this.openTanShangRecommend, this);
+        }
+
+        if(this.dailyTaskNode){
+            this.dailyTaskNode.off(cc.Node.EventType.TOUCH_END, this.onClickDailyTask, this);
+            this.dailyTaskNode.on(cc.Node.EventType.TOUCH_END, this.onClickDailyTask, this);
+        }
+
         // 旧版是按节点名自动查找和动态创建主界面内容；现在改为 Creator 面板拖拽变量。
     }
 
@@ -122,6 +145,7 @@ export default class HomePanel extends BaseUI {
 
         this.refreshStartBtnText();
         this.refreshShareBtnText();
+        this.refreshDailyTaskText();
 
         let homeStageLabel:cc.Label = this.stageLabel;
         if(!homeStageLabel){
@@ -343,6 +367,32 @@ export default class HomePanel extends BaseUI {
         label.string = "分享战绩";
     }
 
+    private refreshDailyTaskText(){
+        if(!this.dailyTaskNode || !cc.isValid(this.dailyTaskNode))return;
+
+        let label:cc.Label = this.dailyTaskNode.getComponent(cc.Label);
+        if(!label){
+            let txtNode:cc.Node = this.dailyTaskNode.getChildByName("txt");
+            if(txtNode){
+                label = txtNode.getComponent(cc.Label);
+            }
+        }
+
+        if(label){
+            label.string = DiceGameSave.getDailyTaskText();
+        }
+    }
+
+    private onClickDailyTask(){
+        let rewardTask:string = DiceGameSave.claimDailyTaskReward();
+        if(rewardTask && rewardTask.length > 0){
+            GameMain.instance.showTip(`${rewardTask}完成，挑战次数+1`);
+            this.refreshStartView();
+        }else{
+            GameMain.instance.showTip(DiceGameSave.getDailyTaskText());
+        }
+    }
+
     private openRankPanel(){
         if(!ConstValue.ENABLE_FRIEND_RANK){
             GameMain.instance.showTip("功能开发中");
@@ -370,6 +420,7 @@ export default class HomePanel extends BaseUI {
      */
     private onShareBestDamage(){
         ShareManager.shareFromScene("home_share");
+        this.refreshDailyTaskText();
     }
 
     /**
@@ -386,6 +437,36 @@ export default class HomePanel extends BaseUI {
      */
     private openArena(){
         ArenaManager.openArena();
+    }
+
+    /**
+     * 自定义跳转到《摊上捡个宝》，不使用微信后台互推组件。
+     */
+    private openTanShangRecommend(){
+        if(cc.sys.platform !== cc.sys.WECHAT_GAME || typeof wx === "undefined" || !wx.navigateToMiniProgram){
+            GameMain.instance.showTip("请在微信内打开");
+            return;
+        }
+
+        if(!this.tanShangAppId || this.tanShangAppId.length <= 0){
+            GameMain.instance.showTip("请先配置推荐游戏AppId");
+            return;
+        }
+
+        wx.navigateToMiniProgram({
+            appId: this.tanShangAppId,
+            path: this.tanShangPath || "",
+            extraData: {
+                from: "dice_rouge_home_card"
+            },
+            success: () => {
+                console.log("跳转《摊上捡个宝》成功");
+            },
+            fail: (err:any) => {
+                console.error("跳转《摊上捡个宝》失败:", err);
+                GameMain.instance.showTip("暂时无法打开推荐游戏");
+            }
+        });
     }
 
     /**
@@ -469,6 +550,12 @@ export default class HomePanel extends BaseUI {
         }
         if(this.btn_arena){
             this.btn_arena.off(cc.Node.EventType.TOUCH_END, this.openArena, this);
+        }
+        if(this.btn_tanShangRecommend){
+            this.btn_tanShangRecommend.off(cc.Node.EventType.TOUCH_END, this.openTanShangRecommend, this);
+        }
+        if(this.dailyTaskNode){
+            this.dailyTaskNode.off(cc.Node.EventType.TOUCH_END, this.onClickDailyTask, this);
         }
         HomePanel.instance = null!;
     }

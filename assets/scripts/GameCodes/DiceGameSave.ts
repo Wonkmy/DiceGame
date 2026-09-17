@@ -20,6 +20,11 @@ export default class DiceGameSave {
     private static readonly DAILY_SHARE_CHALLENGE_USED_KEY = "dice_daily_share_challenge_used";
     private static readonly DAILY_VIDEO_CHALLENGE_USED_KEY = "dice_daily_video_challenge_used";
     private static readonly DAILY_REROLL_VIDEO_USED_KEY = "dice_daily_reroll_video_used";
+    private static readonly DAILY_PLAY_COUNT_KEY = "dice_daily_play_count";
+    private static readonly DAILY_SHARE_COUNT_KEY = "dice_daily_share_count";
+    private static readonly DAILY_TASK_PLAY_CLAIMED_KEY = "dice_daily_task_play_claimed";
+    private static readonly DAILY_TASK_STAGE_CLAIMED_KEY = "dice_daily_task_stage_claimed";
+    private static readonly DAILY_TASK_SHARE_CLAIMED_KEY = "dice_daily_task_share_claimed";
     private static readonly FIRST_GUIDE_DONE_KEY = "dice_first_guide_done";
     private static readonly FIRST_FAIL_HELP_GUIDE_KEY = "dice_first_fail_help_guide";
     private static readonly FIRST_WIN_SHOW_KEY = "dice_first_win_show";
@@ -94,6 +99,7 @@ export default class DiceGameSave {
         }
 
         cc.sys.localStorage.setItem(this.DAILY_USED_KEY, String(usedCount + 1));
+        this.addDailyPlayCount();
         return true;
     }
 
@@ -180,6 +186,40 @@ export default class DiceGameSave {
         cc.sys.localStorage.setItem(this.DAILY_USED_KEY, String(usedCount));
     }
 
+    static recordDailyShare(){
+        this.checkDailyData();
+        let shareCount:number = Number(cc.sys.localStorage.getItem(this.DAILY_SHARE_COUNT_KEY)) || 0;
+        cc.sys.localStorage.setItem(this.DAILY_SHARE_COUNT_KEY, String(shareCount + 1));
+    }
+
+    static getDailyTaskText():string{
+        this.checkDailyData();
+
+        let task:any = this.getFirstDailyTask();
+        if(!task){
+            return "今日任务：已全部完成";
+        }
+
+        if(task.finished && !task.claimed){
+            return `今日任务：${task.title} 可领取+1挑战`;
+        }
+
+        return `今日任务：${task.title} ${task.progress}/${task.target}`;
+    }
+
+    static claimDailyTaskReward():string{
+        this.checkDailyData();
+
+        let task:any = this.getFirstDailyTask();
+        if(!task || !task.finished || task.claimed){
+            return "";
+        }
+
+        cc.sys.localStorage.setItem(task.claimKey, "1");
+        this.addDailyChallengeChance(1);
+        return task.title;
+    }
+
     static canNewUserAutoPlay():boolean{
         return cc.sys.localStorage.getItem(this.NEW_USER_AUTO_PLAY_KEY) !== "1";
     }
@@ -264,6 +304,11 @@ export default class DiceGameSave {
         cc.sys.localStorage.removeItem(this.DAILY_SHARE_CHALLENGE_USED_KEY);
         cc.sys.localStorage.removeItem(this.DAILY_VIDEO_CHALLENGE_USED_KEY);
         cc.sys.localStorage.removeItem(this.DAILY_REROLL_VIDEO_USED_KEY);
+        cc.sys.localStorage.removeItem(this.DAILY_PLAY_COUNT_KEY);
+        cc.sys.localStorage.removeItem(this.DAILY_SHARE_COUNT_KEY);
+        cc.sys.localStorage.removeItem(this.DAILY_TASK_PLAY_CLAIMED_KEY);
+        cc.sys.localStorage.removeItem(this.DAILY_TASK_STAGE_CLAIMED_KEY);
+        cc.sys.localStorage.removeItem(this.DAILY_TASK_SHARE_CLAIMED_KEY);
         cc.sys.localStorage.removeItem(this.FIRST_GUIDE_DONE_KEY);
         cc.sys.localStorage.removeItem(this.FIRST_FAIL_HELP_GUIDE_KEY);
         cc.sys.localStorage.removeItem(this.FIRST_WIN_SHOW_KEY);
@@ -282,6 +327,11 @@ export default class DiceGameSave {
         cc.sys.localStorage.setItem(this.DAILY_SHARE_CHALLENGE_USED_KEY, "0");
         cc.sys.localStorage.setItem(this.DAILY_VIDEO_CHALLENGE_USED_KEY, "0");
         cc.sys.localStorage.setItem(this.DAILY_REROLL_VIDEO_USED_KEY, "0");
+        cc.sys.localStorage.setItem(this.DAILY_PLAY_COUNT_KEY, "0");
+        cc.sys.localStorage.setItem(this.DAILY_SHARE_COUNT_KEY, "0");
+        cc.sys.localStorage.setItem(this.DAILY_TASK_PLAY_CLAIMED_KEY, "0");
+        cc.sys.localStorage.setItem(this.DAILY_TASK_STAGE_CLAIMED_KEY, "0");
+        cc.sys.localStorage.setItem(this.DAILY_TASK_SHARE_CLAIMED_KEY, "0");
     }
 
     static debugSetNewUser(){
@@ -301,6 +351,39 @@ export default class DiceGameSave {
         cc.sys.localStorage.setItem(this.DAILY_SHARE_CHALLENGE_USED_KEY, "0");
         cc.sys.localStorage.setItem(this.DAILY_VIDEO_CHALLENGE_USED_KEY, "0");
         cc.sys.localStorage.setItem(this.DAILY_REROLL_VIDEO_USED_KEY, "0");
+        cc.sys.localStorage.setItem(this.DAILY_PLAY_COUNT_KEY, "0");
+        cc.sys.localStorage.setItem(this.DAILY_SHARE_COUNT_KEY, "0");
+        cc.sys.localStorage.setItem(this.DAILY_TASK_PLAY_CLAIMED_KEY, "0");
+        cc.sys.localStorage.setItem(this.DAILY_TASK_STAGE_CLAIMED_KEY, "0");
+        cc.sys.localStorage.setItem(this.DAILY_TASK_SHARE_CLAIMED_KEY, "0");
+    }
+
+    private static addDailyPlayCount(){
+        this.checkDailyData();
+        let playCount:number = Number(cc.sys.localStorage.getItem(this.DAILY_PLAY_COUNT_KEY)) || 0;
+        cc.sys.localStorage.setItem(this.DAILY_PLAY_COUNT_KEY, String(playCount + 1));
+    }
+
+    private static getFirstDailyTask():any{
+        let playCount:number = Number(cc.sys.localStorage.getItem(this.DAILY_PLAY_COUNT_KEY)) || 0;
+        let shareCount:number = Number(cc.sys.localStorage.getItem(this.DAILY_SHARE_COUNT_KEY)) || 0;
+        let todayBestStage:number = this.getTodayBestStage();
+        let tasks:any[] = [
+            { title:"挑战1次", progress:Math.min(playCount, 1), target:1, claimKey:this.DAILY_TASK_PLAY_CLAIMED_KEY },
+            { title:"到达第5关", progress:Math.min(todayBestStage, 5), target:5, claimKey:this.DAILY_TASK_STAGE_CLAIMED_KEY },
+            { title:"分享1次", progress:Math.min(shareCount, 1), target:1, claimKey:this.DAILY_TASK_SHARE_CLAIMED_KEY },
+        ];
+
+        for(let i = 0;i < tasks.length;i++){
+            let task:any = tasks[i];
+            task.finished = task.progress >= task.target;
+            task.claimed = cc.sys.localStorage.getItem(task.claimKey) === "1";
+            if(!task.claimed){
+                return task;
+            }
+        }
+
+        return null;
     }
 
     private static checkDailyData(){

@@ -44,6 +44,7 @@ export default class ShareManager {
         }
 
         try{
+            DiceGameSave.recordDailyShare();
             wx.shareAppMessage(this.getShareData("share"));
         }catch(e){
             console.error("分享最高伤害失败:", e);
@@ -59,11 +60,13 @@ export default class ShareManager {
 
         if (!this.canUseWechatShare()) {
             console.log("当前环境不支持微信分享，本地直接走求助回调");
+            DiceGameSave.recordDailyShare();
             this.safeCallback(callback);
             return;
         }
 
         try{
+            DiceGameSave.recordDailyShare();
             wx.shareAppMessage(shareData);
         }catch(e){
             console.error("分享求助失败:", e);
@@ -85,11 +88,13 @@ export default class ShareManager {
 
         if (!this.canUseWechatShare()) {
             console.log("当前环境不支持微信分享，本地直接走补次数回调");
+            DiceGameSave.recordDailyShare();
             this.safeCallback(callback);
             return;
         }
 
         try{
+            DiceGameSave.recordDailyShare();
             wx.shareAppMessage(shareData);
         }catch(e){
             console.error("分享挑战失败:", e);
@@ -113,6 +118,7 @@ export default class ShareManager {
         }
 
         try{
+            DiceGameSave.recordDailyShare();
             wx.shareAppMessage(this.getShareData(scene));
         }catch(e){
             console.error("主动分享失败:", e);
