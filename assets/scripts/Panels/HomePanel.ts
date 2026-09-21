@@ -83,6 +83,12 @@ export default class HomePanel extends BaseUI {
             DebugTool.attach(this.node);
         }
         GameMain.instance.playHomeBgm();
+
+        cc.tween(this.btn_tanShangRecommend)
+            .repeatForever(
+                cc.tween().by(0.6,{angle:-15}).by(0.6,{angle:15})
+            )
+            .start()
     }
 
     private bindHomeBtns(){
