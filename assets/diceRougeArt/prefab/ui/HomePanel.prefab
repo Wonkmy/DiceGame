@@ -2811,8 +2811,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 151,
-      "height": 120
+      "width": 126,
+      "height": 100
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -2823,8 +2823,8 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        -287.486,
-        -301.689,
+        -285.269,
+        -304.453,
         0,
         0,
         0,

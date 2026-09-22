@@ -25,6 +25,8 @@ export default class HomePanel extends BaseUI {
     private startingChallenge:boolean = false;
     private watchingChallengeVideo:boolean = false;
     private startBtnOriginScale:number = 1;
+    private tanShangRecommendOriginScale:number = 1;
+    private tanShangRecommendOriginAngle:number = 0;
 
     // @property({type:cc.Label, displayName:"标题文本", tooltip:"主界面顶部显示的游戏标题文本"})
     // titleLabel:cc.Label = null!;
@@ -79,16 +81,11 @@ export default class HomePanel extends BaseUI {
         this.bindHomeBtns();
         this.refreshStartView();
         this.startStartBtnBounce();
+        this.startTanShangRecommendAnim();
         if(CC_DEBUG){
             DebugTool.attach(this.node);
         }
         GameMain.instance.playHomeBgm();
-
-        cc.tween(this.btn_tanShangRecommend)
-            .repeatForever(
-                cc.tween().by(0.6,{angle:-15}).by(0.6,{angle:15})
-            )
-            .start()
     }
 
     private bindHomeBtns(){
@@ -523,6 +520,29 @@ export default class HomePanel extends BaseUI {
             .start();
     }
 
+    /**
+     * 推荐卡片轻微抢眼动画：和开始按钮区分开，用小幅晃动+呼吸感提醒点击。
+     */
+    private startTanShangRecommendAnim(){
+        if(!this.btn_tanShangRecommend || !cc.isValid(this.btn_tanShangRecommend))return;
+
+        this.tanShangRecommendOriginScale = this.btn_tanShangRecommend.scale;
+        this.tanShangRecommendOriginAngle = this.btn_tanShangRecommend.angle;
+        cc.Tween.stopAllByTarget(this.btn_tanShangRecommend);
+        this.btn_tanShangRecommend.scale = this.tanShangRecommendOriginScale;
+        this.btn_tanShangRecommend.angle = this.tanShangRecommendOriginAngle;
+        cc.tween(this.btn_tanShangRecommend)
+            .repeatForever(
+                cc.tween()
+                    .to(0.16, { scale: this.tanShangRecommendOriginScale * 1.07, angle: this.tanShangRecommendOriginAngle - 4 }, { easing: "sineOut" })
+                    .to(0.16, { scale: this.tanShangRecommendOriginScale * 1.03, angle: this.tanShangRecommendOriginAngle + 4 }, { easing: "sineInOut" })
+                    .to(0.14, { scale: this.tanShangRecommendOriginScale * 1.06, angle: this.tanShangRecommendOriginAngle - 2 }, { easing: "sineInOut" })
+                    .to(0.18, { scale: this.tanShangRecommendOriginScale, angle: this.tanShangRecommendOriginAngle }, { easing: "sineOut" })
+                    .delay(0.85)
+            )
+            .start();
+    }
+
     private stopStartBtnBounce(){
         if(!this.btn_start || !cc.isValid(this.btn_start))return;
 
@@ -531,8 +551,17 @@ export default class HomePanel extends BaseUI {
         this.btn_start.scaleY = this.startBtnOriginScale;
     }
 
+    private stopTanShangRecommendAnim(){
+        if(!this.btn_tanShangRecommend || !cc.isValid(this.btn_tanShangRecommend))return;
+
+        cc.Tween.stopAllByTarget(this.btn_tanShangRecommend);
+        this.btn_tanShangRecommend.scale = this.tanShangRecommendOriginScale;
+        this.btn_tanShangRecommend.angle = this.tanShangRecommendOriginAngle;
+    }
+
     override onDestroy(): void {
         this.stopStartBtnBounce();
+        this.stopTanShangRecommendAnim();
         if(this.btn_start){
             this.btn_start.off(cc.Node.EventType.TOUCH_END, this.onStartChallenge, this);
         }
