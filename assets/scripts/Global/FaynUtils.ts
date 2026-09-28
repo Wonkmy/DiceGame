@@ -44,11 +44,10 @@ export class FaynUtils {
     }
     static SetMusicEnabled(enabled:boolean){
         cc.sys.localStorage.setItem("musicEnabled",enabled ? "1" : "0");
-        // 当前项目有主页和战斗两条 BGM，设置关闭时统一暂停，打开时恢复已有音轨。
-        if(enabled){
-            AudioEngine.Resume("bgmloop");
-            AudioEngine.Resume("battlebgmloop");
-        }else{
+        // 关闭时作废正在异步加载的 BGM；重新打开时由 GameMain 按当前界面重新播放一条。
+        if(!enabled){
+            AudioEngine.CancelPendingLoop("bgmloop");
+            AudioEngine.CancelPendingLoop("battlebgmloop");
             AudioEngine.Pause("bgmloop");
             AudioEngine.Pause("battlebgmloop");
         }
@@ -245,6 +244,7 @@ class AudioEngine extends cc.Component {
     private static audios: Audio[] = [];
     private static path: string = "";
     private static readonly SFX_VOLUME_RATE:number = 0.35;
+    private static loopPlayVersion:any = {};
 
     private static Preload(path:string) {
         AudioEngine.audios = new Array<Audio>();
@@ -261,11 +261,23 @@ class AudioEngine extends cc.Component {
 
         let audioID;
         let a: Audio;
+        let loopVersion:number = 0;
+        if(loop){
+            // 同名 BGM 只允许存在一条，避免设置界面反复开关后叠播。
+            loopVersion = AudioEngine.nextLoopPlayVersion(name);
+            AudioEngine.StopAllByName(name);
+        }
         GameMain.instance.bundle.load((this.path != "" ? this.path + "/" + name : "audios/" + name), cc.AudioClip, (err, audio: cc.AudioClip) => {
             if(err || !audio)return;
+            if(loop){
+                if(!FaynUtils.IsMusicEnabled())return;
+                if(!AudioEngine.isLatestLoopPlay(name, loopVersion))return;
+                // load 是异步的，真正播放前再清一次，防止快速开关产生多个回调叠加。
+                AudioEngine.StopAllByName(name);
+            }
 
             audioID = cc.audioEngine.play(audio, loop, this.getFinalVolume(loop, volume));
-            a = new Audio(audioID, audio);
+            a = new Audio(audioID, audio, name);
             AudioEngine.audios.push(a);
             cc.audioEngine.setFinishCallback(audioID, function () {
                 AudioEngine.removeFinishedAudio(audioID);
@@ -283,7 +295,7 @@ class AudioEngine extends cc.Component {
 
             // 一整轮骰子只播一个循环音效，到本轮发骰结束时主动停止。
             let audioID:number = cc.audioEngine.play(audio, true, this.getFinalVolume(false, volume));
-            let a:Audio = new Audio(audioID, audio);
+            let a:Audio = new Audio(audioID, audio, name);
             AudioEngine.audios.push(a);
             setTimeout(() => {
                 cc.audioEngine.stop(audioID);
@@ -302,30 +314,43 @@ class AudioEngine extends cc.Component {
     }
 
     public static Resume(name) {
-        let aId = this.GetIdByName(name);
-        if (aId != -1) {
-            cc.audioEngine.resume(aId);
-            return aId;
+        let ids:number[] = this.GetIdsByName(name);
+        if (ids.length > 0) {
+            for(let i = 0;i < ids.length;i++){
+                cc.audioEngine.resume(ids[i]);
+            }
+            return ids[0];
         }
         return -1;
     }
 
     public static Pause(name) {
-        let audioId = AudioEngine.GetIdByName(name);
+        let ids:number[] = AudioEngine.GetIdsByName(name);
+        if(ids.length <= 0)return null;
 
-        if (audioId != null && audioId != -1) {
-            return cc.audioEngine.pause(audioId);
+        for(let i = 0;i < ids.length;i++){
+            cc.audioEngine.pause(ids[i]);
         }
 
-        return null;
+        return ids[0];
     }
 
     public static Stop(name:string) {
-        let audioId = AudioEngine.GetIdByName(name);
-        if(audioId == null || audioId == -1)return;
+        AudioEngine.CancelPendingLoop(name);
+        AudioEngine.StopAllByName(name);
+    }
 
-        cc.audioEngine.stop(audioId);
-        AudioEngine.removeAudioById(audioId);
+    public static CancelPendingLoop(name:string) {
+        AudioEngine.nextLoopPlayVersion(name);
+    }
+
+    public static StopAllByName(name:string) {
+        for (let i = AudioEngine.audios.length - 1; i >= 0; i--) {
+            if(AudioEngine.audios[i].name !== name)continue;
+
+            cc.audioEngine.stop(AudioEngine.audios[i].id);
+            AudioEngine.audios.splice(i, 1);
+        }
     }
 
     public static GetState(name) {
@@ -376,6 +401,26 @@ class AudioEngine extends cc.Component {
         }
         return -1;
     }
+
+    private static GetIdsByName(name):number[] {
+        let ids:number[] = [];
+        for (let taudio of AudioEngine.audios) {
+            if (taudio.name === name) {
+                ids.push(taudio.id);
+            }
+        }
+        return ids;
+    }
+
+    private static nextLoopPlayVersion(name:string):number{
+        let version:number = (AudioEngine.loopPlayVersion[name] || 0) + 1;
+        AudioEngine.loopPlayVersion[name] = version;
+        return version;
+    }
+
+    private static isLatestLoopPlay(name:string, version:number):boolean{
+        return AudioEngine.loopPlayVersion[name] === version;
+    }
     // update (dt) {}
 }
 
@@ -384,10 +429,10 @@ class Audio {
     public clip: cc.AudioClip;
     public name: string;
 
-    constructor(_id, _clip) {
+    constructor(_id, _clip, _name:string = "") {
         this.id = _id;
         this.clip = _clip;
-        this.name = _clip.name;
+        this.name = _name && _name.length > 0 ? _name : _clip.name;
     }
 
 }

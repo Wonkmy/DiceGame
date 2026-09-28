@@ -14,12 +14,12 @@ export class Advertise {
     private static readonly VIDEO_ID = "adunit-e079c8ce1e917b06";// 激励视频
     private static readonly CHAPING_ID = "adunit-13ff17c64e71d75b";// 插屏广告
     private static readonly gezi_ID = "adunit-ec70bdeec82aff54";// 原生模板广告
-    private static readonly NORMAL_PANEL_CHAPING_RATE:number = 0.65;
+    private static readonly NORMAL_PANEL_CHAPING_RATE:number = 0.85;
     private static readonly RESULT_WIN_BANNER_RATE:number = 0.5;
-    private static readonly RESULT_WIN_CHAPING_RATE:number = 0.2;
-    private static readonly RESULT_EARLY_WIN_CHAPING_RATE:number = 0.05;
-    private static readonly RESULT_FAIL_CHAPING_RATE:number = 0.2;
-    private static readonly BACK_HOME_CHAPING_RATE:number = 0.8;
+    private static readonly RESULT_WIN_CHAPING_RATE:number = 0.65;
+    private static readonly RESULT_EARLY_WIN_CHAPING_RATE:number = 0.35;
+    private static readonly RESULT_FAIL_CHAPING_RATE:number = 0.7;
+    private static readonly BACK_HOME_CHAPING_RATE:number = 0.9;
 
     static init() {
         this.initVideoAd();
